@@ -2,6 +2,7 @@ package org.clueminer.cli;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
+import java.util.concurrent.Executors;
 
 /**
  *
@@ -14,7 +15,9 @@ public class Run {
      */
     public static void main(String[] args) {
         Params p = parseArguments(args);
-        Runner r = new Runner(p);
+        Runner runner = new Runner(p);
+
+        Executors.newSingleThreadExecutor().execute(runner);
     }
 
     protected static Params parseArguments(String[] args) {

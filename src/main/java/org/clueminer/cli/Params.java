@@ -18,6 +18,19 @@ public class Params {
     @Parameter(names = "--data", description = "path to dataset", required = true)
     public String data;
 
+    @Parameter(names = "--type", description = "type of data", required = false)
+    public String type = "csv";
+
+    @Parameter(names = "--separator", description = "separator of columns", required = false)
+    public String separator = ",";
+
+    @Parameter(names = "--class", description = "index of class column", required = false)
+    public int clsIndex = -1;
+
+    @Parameter(names = "--header", description = "if there is a header with attribute name", required = false)
+    public boolean header = true;
+
     @Parameter(names = "--algorithm", description = "name of algorithm", required = true)
     public String algorithm;
+
 }
