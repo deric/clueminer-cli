@@ -30,7 +30,13 @@ public class Params {
     @Parameter(names = "--header", description = "if there is a header with attribute name", required = false)
     public boolean header = true;
 
-    @Parameter(names = "--algorithm", description = "name of algorithm", required = true)
+    @Parameter(names = "--algorithm", description = "name of the algorithm", required = true)
     public String algorithm;
+
+    @Parameter(names = "--alg-params", description = "parameters of the algorithm", required = false)
+    public String algParams;
+
+    @Parameter(names = "--cluster", description = "run clustering of rows, columns or both", required = false)
+    public String cluster = "both";
 
 }
