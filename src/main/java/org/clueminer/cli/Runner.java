@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.plugin.ArrayDataset;
+import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.FileHandler;
 import org.openide.util.Exceptions;
@@ -45,6 +46,14 @@ public class Runner implements Runnable {
                     FileHandler.loadDataset(f, dataset, p.separator);
                 } else {
                     FileHandler.loadDataset(f, dataset, clsIndex, p.separator);
+                }
+                break;
+            case "arff":
+                ARFFHandler arff = new ARFFHandler();
+                if (clsIndex > 0) {
+                    arff.load(f, dataset, clsIndex);
+                } else {
+                    arff.load(f, dataset);
                 }
                 break;
             default:

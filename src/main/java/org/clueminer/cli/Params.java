@@ -18,7 +18,7 @@ public class Params {
     @Parameter(names = "--data", description = "path to dataset", required = true)
     public String data;
 
-    @Parameter(names = "--type", description = "type of data", required = false)
+    @Parameter(names = "--type", description = "type of data (csv, txt, arff)", required = false)
     public String type = "csv";
 
     @Parameter(names = "--separator", description = "separator of columns", required = false)
