@@ -8,7 +8,7 @@ import java.util.concurrent.Executors;
  *
  * @author deric
  */
-public class Run {
+public class Main {
 
     /**
      * @param args the command line arguments
