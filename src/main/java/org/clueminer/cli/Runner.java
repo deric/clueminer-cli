@@ -3,6 +3,7 @@ package org.clueminer.cli;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,13 +47,25 @@ public class Runner implements Runnable {
 
         Dataset<? extends Instance> dataset = new ArrayDataset(150, 5);
         int clsIndex = p.clsIndex;
+        ArrayList<Integer> skip = new ArrayList<>(1);
         switch (p.type) {
             case "csv":
                 CsvLoader csvLoad = new CsvLoader();
                 csvLoad.setSeparator(p.separator.charAt(0));
-                if (clsIndex > 0) {
+                if (clsIndex > -1) {
                     csvLoad.setClassIndex(clsIndex);
                 }
+                if (p.skip != null) {
+                    String[] idx = p.skip.split(",");
+                    for (String id : idx) {
+                        skip.add(Integer.valueOf(id));
+                    }
+                }
+                if (p.idIndex > -1) {
+                    csvLoad.addNameAttr(p.idIndex);
+                    skip.add(p.idIndex);
+                }
+                csvLoad.setSkipIndex(skip);
                 csvLoad.setHasHeader(p.header);
                 csvLoad.load(f, dataset);
                 break;
@@ -152,8 +165,8 @@ public class Runner implements Runnable {
         DgViewer panel = new DgViewer();
         panel.setDataset(mapping);
         //pixels per element in matrix
-        double mult = 8.0;
-        int width = (int) (200 + dataset.attributeCount() * mult);
+        double mult = 20.0;
+        int width = (int) (600 + dataset.attributeCount() * 40);
         int height = (int) (200 + dataset.size() * mult);
         logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);

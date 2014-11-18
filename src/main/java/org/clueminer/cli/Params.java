@@ -27,6 +27,12 @@ public class Params {
     @Parameter(names = "--class", description = "index of class column", required = false)
     public int clsIndex = -1;
 
+    @Parameter(names = "--id", description = "index of ID column", required = false)
+    public int idIndex = -1;
+
+    @Parameter(names = "--skip", description = "commma separated list of indexes to skip", required = false)
+    public String skip = null;
+
     @Parameter(names = "--header", description = "if there is a header with attribute name", required = false)
     public boolean header = true;
 
