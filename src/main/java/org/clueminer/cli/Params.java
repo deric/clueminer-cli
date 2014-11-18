@@ -39,4 +39,10 @@ public class Params {
     @Parameter(names = "--cluster", description = "run clustering of rows, columns or both", required = false)
     public String cluster = "both";
 
+    @Parameter(names = "--tree", description = "print dendrogram tree", required = false)
+    public boolean tree = false;
+
+    @Parameter(names = "--matrix", description = "print similarity matrix", required = false)
+    public boolean matrix = false;
+
 }

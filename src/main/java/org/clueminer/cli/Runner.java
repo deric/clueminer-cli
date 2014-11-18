@@ -2,6 +2,7 @@ package org.clueminer.cli;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.clueminer.clustering.ClusteringExecutorCached;
@@ -11,6 +12,7 @@ import org.clueminer.clustering.api.ClusteringFactory;
 import org.clueminer.clustering.api.Executor;
 import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
+import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.plugin.ArrayDataset;
@@ -93,6 +95,9 @@ public class Runner implements Runnable {
         logger.log(Level.INFO, "loaded dataset with {0} instances, {1} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount()});
         ClusteringAlgorithm algorithm = parseAlgorithm(params);
+        for (Entry<Integer, Attribute> e : dataset.getAttributes().entrySet()) {
+            System.out.println(e.getKey() + ": " + e.getValue());
+        }
 
         if (algorithm == null) {
             throw new RuntimeException("failed to load algorithm '" + params.algorithm + "'");
@@ -116,7 +121,14 @@ public class Runner implements Runnable {
                     break;
             }
             if (res != null) {
-                res.getTreeData().print();
+                if (params.matrix) {
+                    if (res.getProximityMatrix() != null) {
+                        res.getProximityMatrix().printLower(5, 2);
+                    }
+                }
+                if (params.tree) {
+                    res.getTreeData().print();
+                }
             }
         } else {
             throw new RuntimeException("non-hierarchical algorithms are not supported yet");
