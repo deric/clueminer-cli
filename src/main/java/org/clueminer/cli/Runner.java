@@ -1,10 +1,12 @@
 package org.clueminer.cli;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.api.AgglomerativeClustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
@@ -16,6 +18,7 @@ import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.plugin.ArrayDataset;
+import org.clueminer.dgram.DgViewer;
 import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.FileHandler;
@@ -107,6 +110,7 @@ public class Runner implements Runnable {
             Executor exec = new ClusteringExecutorCached();
             exec.setAlgorithm((AgglomerativeClustering) algorithm);
             HierarchicalResult res = null;
+            DendrogramMapping mapping = null;
             Props prop = new Props();
             switch (params.cluster) {
                 case "rows":
@@ -116,7 +120,7 @@ public class Runner implements Runnable {
                     res = exec.hclustRows(dataset, prop);
                     break;
                 case "both":
-                    DendrogramMapping mapping = exec.clusterAll(dataset, prop);
+                    mapping = exec.clusterAll(dataset, prop);
                     res = mapping.getRowsResult();
                     break;
             }
@@ -129,9 +133,38 @@ public class Runner implements Runnable {
                 if (params.tree) {
                     res.getTreeData().print();
                 }
+
+                if (params.heatmap) {
+                    saveHeatmap(params, dataset, mapping);
+                }
             }
         } else {
             throw new RuntimeException("non-hierarchical algorithms are not supported yet");
+        }
+    }
+
+    private void saveHeatmap(Params params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
+        String name = dataset.getName();
+        if (name == null) {
+            RandomString rand = new RandomString(8);
+            name = rand.nextString();
+        }
+        DgViewer panel = new DgViewer();
+        panel.setDataset(mapping);
+        //pixels per element in matrix
+        double mult = 8.0;
+        int width = (int) (200 + dataset.attributeCount() * mult);
+        int height = (int) (200 + dataset.size() * mult);
+        logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
+        BufferedImage image = panel.getBufferedImage(width, height);
+
+        File file = new File(params.home + File.separatorChar + name + ".png");
+        logger.log(Level.INFO, "saving heatmap to {0}", file.getAbsolutePath());
+        String format = "png";
+        try {
+            ImageIO.write(image, format, file);
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
         }
     }
 

@@ -45,4 +45,7 @@ public class Params {
     @Parameter(names = "--matrix", description = "print similarity matrix", required = false)
     public boolean matrix = false;
 
+    @Parameter(names = "--heatmap", description = "save heatmap to file", required = false)
+    public boolean heatmap = false;
+
 }
