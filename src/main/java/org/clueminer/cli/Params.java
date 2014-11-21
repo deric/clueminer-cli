@@ -54,4 +54,7 @@ public class Params {
     @Parameter(names = "--heatmap", description = "save heatmap to file", required = false)
     public boolean heatmap = false;
 
+    @Parameter(names = "--cutoff", description = "Cutoff strategy", required = false)
+    public String cutoff = "hill-climb inc";
+
 }
