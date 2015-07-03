@@ -4,6 +4,15 @@ This project is dependent on the main repository of [Clueminer](https://github.c
 
 ## Build
 
+just compile JARs
+
+    mvn install
+
+and run it:
+
+    ./run
+
+
   - to build single all containing JAR:
 ```
 mvn assembly:assembly
