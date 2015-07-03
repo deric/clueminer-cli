@@ -168,8 +168,8 @@ public class Runner implements Runnable {
         panel.setDataset(mapping);
         //pixels per element in matrix
         double mult = 20.0;
-        int width = (int) (600 + dataset.attributeCount() * 40);
-        int height = (int) (200 + dataset.size() * mult);
+        int width = (int) (params.width + dataset.attributeCount() * 40);
+        int height = (int) (params.height + dataset.size() * mult);
         logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);
 

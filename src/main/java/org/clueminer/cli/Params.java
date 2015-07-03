@@ -57,4 +57,10 @@ public class Params {
     @Parameter(names = "--cutoff", description = "Cutoff strategy", required = false)
     public String cutoff = "hill-climb inc";
 
+    @Parameter(names = "--width", description = "minimal width", required = false)
+    public int width = 200;
+
+    @Parameter(names = "--height", description = "minimal height", required = false)
+    public int height = 200;
+
 }
