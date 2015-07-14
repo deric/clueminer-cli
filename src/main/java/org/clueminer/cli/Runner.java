@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.clueminer.clustering.ClusteringExecutorCached;
+import org.clueminer.clustering.algorithm.HClustResult;
 import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
@@ -16,6 +17,7 @@ import org.clueminer.clustering.api.ClusteringFactory;
 import org.clueminer.clustering.api.Executor;
 import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
+import org.clueminer.clustering.struct.DendrogramData2;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
@@ -130,6 +132,8 @@ public class Runner implements Runnable {
             switch (params.cluster) {
                 case "rows":
                     res = exec.hclustRows(dataset, prop);
+                    HierarchicalResult colRes = new HClustResult(dataset, prop);
+                    mapping = new DendrogramData2(dataset, res, colRes);
                     break;
                 case "columns":
                     res = exec.hclustRows(dataset, prop);
@@ -173,7 +177,7 @@ public class Runner implements Runnable {
         logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);
 
-        File file = new File(params.home + File.separatorChar + name + ".png");
+        File file = new File(params.home + File.separatorChar + name + "-" + safeName(params.algorithm) + ".png");
         logger.log(Level.INFO, "saving heatmap to {0}", file.getAbsolutePath());
         String format = "png";
         try {
@@ -181,6 +185,10 @@ public class Runner implements Runnable {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
+    }
+
+    public static String safeName(String name) {
+        return name.toLowerCase().replace(" ", "_");
     }
 
 }
