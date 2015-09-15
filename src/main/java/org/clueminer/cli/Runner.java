@@ -73,7 +73,7 @@ public class Runner implements Runnable {
                 csvLoad.load(f, dataset);
                 break;
             case "txt":
-                if (clsIndex > 0) {
+                if (clsIndex > -1) {
                     FileHandler.loadDataset(f, dataset, p.separator);
                 } else {
                     FileHandler.loadDataset(f, dataset, clsIndex, p.separator);
@@ -81,7 +81,7 @@ public class Runner implements Runnable {
                 break;
             case "arff":
                 ARFFHandler arff = new ARFFHandler();
-                if (clsIndex > 0) {
+                if (clsIndex > -1) {
                     arff.load(f, dataset, clsIndex);
                 } else {
                     arff.load(f, dataset);
