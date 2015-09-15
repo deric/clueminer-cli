@@ -12,6 +12,9 @@ and run it:
 
     ./run
 
+changing available memory:
+
+    JAVA_XMX=8192m ./run --algorithm "..." --data "/some/path"
 
   - to build single all containing JAR:
 ```

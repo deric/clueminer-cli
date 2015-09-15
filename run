@@ -2,13 +2,16 @@
 ARGS="$@"
 MAIN="org.clueminer.cli.Main"
 jarfile="$(ls -t target/*jar-with-dependencies.jar | head -1)"
+JAVA_XMX="${JAVA_XMX:-4096m}"
 if [[ -f "$jarfile" ]]; then
-  java -jar $jarfile $ARGS
+  echo "using max heap: $JAVA_XMX"
+  java -Xmx$JAVA_XMX -jar $jarfile $ARGS
 else
   path="target/lib"
+  echo "using max heap: $JAVA_XMX"
   if [[ -d $path ]]; then
     CLASSPATH=$(find "." -name '*.jar' | xargs echo | tr ' ' ':')
-    java -cp $CLASSPATH $MAIN $ARGS
+    java -Xmx$JAVA_XMX -cp $CLASSPATH $MAIN $ARGS
   else
     mvn "-Dexec.args=-classpath %classpath $MAIN $ARGS" -Dexec.executable=java -Dexec.classpathScope=runtime org.codehaus.mojo:exec-maven-plugin:1.2.1:exec
   fi
