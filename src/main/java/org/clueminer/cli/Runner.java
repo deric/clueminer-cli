@@ -10,7 +10,6 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.api.AgglParams;
-import org.clueminer.clustering.api.AgglomerativeClustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
 import org.clueminer.clustering.api.ClusteringFactory;
 import org.clueminer.clustering.api.Executor;
@@ -121,45 +120,42 @@ public class Runner implements Runnable {
             throw new RuntimeException("failed to load algorithm '" + params.algorithm + "'");
         }
 
-        if (algorithm instanceof AgglomerativeClustering) {
-            Executor exec = new ClusteringExecutorCached();
-            exec.setAlgorithm(algorithm);
-            HierarchicalResult res = null;
-            DendrogramMapping mapping = null;
-            Props prop = new Props();
-            prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
-            logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
-            switch (params.cluster) {
-                case "rows":
-                    res = exec.hclustRows(dataset, prop);
-                    mapping = new DendrogramData2(dataset, res);
-                    break;
-                case "columns":
-                    res = exec.hclustRows(dataset, prop);
-                    mapping = new DendrogramData2(dataset, null, res);
-                    break;
-                case "both":
-                    mapping = exec.clusterAll(dataset, prop);
-                    res = mapping.getRowsResult();
-                    break;
-            }
-            if (res != null) {
-                if (params.matrix) {
-                    if (res.getProximityMatrix() != null) {
-                        res.getProximityMatrix().printLower(5, 2);
-                    }
-                }
-                if (params.tree) {
-                    res.getTreeData().print();
-                }
-
-                if (params.heatmap) {
-                    saveHeatmap(params, dataset, mapping);
-                }
-            }
-        } else {
-            throw new RuntimeException("non-hierarchical algorithms are not supported yet");
+        Executor exec = new ClusteringExecutorCached();
+        exec.setAlgorithm(algorithm);
+        HierarchicalResult res = null;
+        DendrogramMapping mapping = null;
+        Props prop = new Props();
+        prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+        logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
+        switch (params.cluster) {
+            case "rows":
+                res = exec.hclustRows(dataset, prop);
+                mapping = new DendrogramData2(dataset, res);
+                break;
+            case "columns":
+                res = exec.hclustColumns(dataset, prop);
+                mapping = new DendrogramData2(dataset, null, res);
+                break;
+            case "both":
+                mapping = exec.clusterAll(dataset, prop);
+                res = mapping.getRowsResult();
+                break;
         }
+        if (res != null) {
+            if (params.matrix) {
+                if (res.getProximityMatrix() != null) {
+                    res.getProximityMatrix().printLower(5, 2);
+                }
+            }
+            if (params.tree) {
+                res.getTreeData().print();
+            }
+
+            if (params.heatmap) {
+                saveHeatmap(params, dataset, mapping);
+            }
+        }
+        logger.log(Level.INFO, "finished clustering: {0}", prop.toString());
     }
 
     private void saveHeatmap(Params params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
