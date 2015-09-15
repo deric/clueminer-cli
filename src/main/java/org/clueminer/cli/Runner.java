@@ -9,7 +9,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.clueminer.clustering.ClusteringExecutorCached;
-import org.clueminer.clustering.algorithm.HClustResult;
 import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
@@ -124,19 +123,20 @@ public class Runner implements Runnable {
 
         if (algorithm instanceof AgglomerativeClustering) {
             Executor exec = new ClusteringExecutorCached();
-            exec.setAlgorithm((AgglomerativeClustering) algorithm);
+            exec.setAlgorithm(algorithm);
             HierarchicalResult res = null;
             DendrogramMapping mapping = null;
             Props prop = new Props();
             prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+            logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
             switch (params.cluster) {
                 case "rows":
                     res = exec.hclustRows(dataset, prop);
-                    HierarchicalResult colRes = new HClustResult(dataset, prop);
-                    mapping = new DendrogramData2(dataset, res, colRes);
+                    mapping = new DendrogramData2(dataset, res);
                     break;
                 case "columns":
                     res = exec.hclustRows(dataset, prop);
+                    mapping = new DendrogramData2(dataset, null, res);
                     break;
                 case "both":
                     mapping = exec.clusterAll(dataset, prop);
