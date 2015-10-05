@@ -16,6 +16,11 @@ changing available memory:
 
     JAVA_XMX=8192m ./run --algorithm "..." --data "/some/path"
 
+run k-means clustering on a ARFF dataset (`k` will be used according to number of classes in the dataset ):
+```
+./run -d ~/_bench/artificial/aggregation.arff -t arff -a k-means -e "AIC,NMI-sqrt" --hint-k
+```
+
   - to build single all containing JAR:
 ```
 mvn assembly:assembly

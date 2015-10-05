@@ -15,10 +15,10 @@ public class Params {
     public String home = System.getProperty("user.home") + File.separatorChar
             + NbBundle.getMessage(FileUtils.class, "FOLDER_Home");
 
-    @Parameter(names = "--data", description = "path to dataset", required = true)
+    @Parameter(names = {"--data", "-d"}, description = "path to dataset", required = true)
     public String data;
 
-    @Parameter(names = "--type", description = "type of data (csv, txt, arff)", required = false)
+    @Parameter(names = {"--type", "-t"}, description = "type of data (csv, txt, arff)", required = false)
     public String type = "csv";
 
     @Parameter(names = "--separator", description = "separator of columns", required = false)
@@ -36,10 +36,10 @@ public class Params {
     @Parameter(names = "--header", description = "if there is a header with attribute name", required = false)
     public boolean header = true;
 
-    @Parameter(names = "--algorithm", description = "name of the algorithm", required = true)
+    @Parameter(names = {"--algorithm", "-a"}, description = "name of the algorithm", required = true)
     public String algorithm;
 
-    @Parameter(names = "--alg-params", description = "parameters of the algorithm", required = false)
+    @Parameter(names = {"--alg-params", "-p"}, description = "parameters of the algorithm", required = false)
     public String algParams;
 
     @Parameter(names = "--cluster", description = "run clustering of rows, columns or both", required = false)
@@ -62,5 +62,11 @@ public class Params {
 
     @Parameter(names = "--height", description = "minimal height", required = false)
     public int height = 200;
+
+    @Parameter(names = {"--eval", "-e"}, description = "internal/external evaluation of resut; provide comma-separated metric names, e.g. 'NMI-sqrt,ARI'", required = false)
+    public String eval = "";
+
+    @Parameter(names = "--hint-k", description = "provide K parameter based on number of classes in the dataset", required = false)
+    public boolean hintK = false;
 
 }
