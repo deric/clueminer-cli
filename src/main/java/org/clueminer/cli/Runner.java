@@ -1,8 +1,12 @@
 package org.clueminer.cli;
 
+import au.com.bytecode.opencsv.CSVWriter;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.logging.Level;
@@ -39,6 +43,7 @@ import org.openide.util.Exceptions;
 public class Runner implements Runnable {
 
     private final Params params;
+    private char separator = ',';
     private static final Logger logger = Logger.getLogger(Runner.class.getName());
 
     Runner(Params p) {
@@ -168,22 +173,71 @@ public class Runner implements Runnable {
                     saveHeatmap(params, dataset, mapping);
                 }
             }
+            if (res != null && evals != null) {
+                evaluate(res.getClustering(), evals, resultsFile(algorithm.getName()));
+            }
         } else {
             //flat partitioning
             Clustering clustering = algorithm.cluster(dataset, prop);
-            evaluate(clustering, evals);
+            evaluate(clustering, evals, resultsFile(algorithm.getName()));
         }
 
         logger.log(Level.INFO, "finished clustering: {0}", prop.toString());
     }
 
-    private void evaluate(Clustering clustering, ClusterEvaluation[] evals) {
+    private File resultsFile(String uniqName) {
+        String path = ensureDir(uniqName) + File.separatorChar + "results.csv";
+        return new File(path);
+    }
+
+    /**
+     * Evaluate
+     *
+     * @param clustering
+     * @param evals
+     * @param results
+     */
+    private void evaluate(Clustering clustering, ClusterEvaluation[] evals, File results) {
+        String[] line;
         if (evals != null) {
+            Dataset<? extends Instance> dataset = clustering.getLookup().lookup(Dataset.class);
+            if (dataset == null) {
+                throw new RuntimeException("dataset not in clustering lookup!");
+            }
+            if (!results.exists()) {
+                line = new String[evals.length + 1];
+                line[0] = "dataset";
+                int i = 1;
+                for (ClusterEvaluation e : evals) {
+                    line[i++] = e.getName();
+                }
+                logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
+                writeCsvLine(results, line, false);
+            }
             double score;
+            line = new String[evals.length + 1];
+            line[0] = dataset.getName();
+            int i = 1;
             for (ClusterEvaluation e : evals) {
                 score = e.score(clustering);
+                line[i++] = String.valueOf(score);
                 System.out.println(e.getName() + ": " + score);
             }
+            writeCsvLine(results, line, true);
+        }
+    }
+
+    public void writeCsvLine(File file, String[] columns, boolean apend) {
+        try (PrintWriter writer = new PrintWriter(
+                new FileOutputStream(file, apend)
+        )) {
+
+            CSVWriter csv = new CSVWriter(writer, separator);
+            csv.writeNext(columns, false);
+            writer.close();
+
+        } catch (FileNotFoundException ex) {
+            Exceptions.printStackTrace(ex);
         }
     }
 
@@ -204,12 +258,32 @@ public class Runner implements Runnable {
         return evals;
     }
 
-    private void saveHeatmap(Params params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
-        String name = dataset.getName();
-        if (name == null) {
+    /**
+     * Create directory inside working dir
+     *
+     * @param name
+     * @return
+     */
+    private String ensureDir(String name) {
+        if (name == null || name.isEmpty()) {
             RandomString rand = new RandomString(8);
             name = rand.nextString();
         }
+        String path = params.home + File.separatorChar + name;
+        return mkdir(path);
+    }
+
+    public String mkdir(String folder) {
+        File file = new File(folder);
+        if (!file.exists()) {
+            if (!file.mkdirs()) {
+                throw new RuntimeException("Failed to create " + folder + " !");
+            }
+        }
+        return file.getAbsolutePath();
+    }
+
+    private void saveHeatmap(Params params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
         DgViewer panel = new DgViewer();
         panel.setDataset(mapping);
         //pixels per element in matrix
@@ -219,7 +293,7 @@ public class Runner implements Runnable {
         logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);
 
-        File file = new File(params.home + File.separatorChar + name + "-" + safeName(params.algorithm) + ".png");
+        File file = new File(ensureDir(dataset.getName()) + File.separatorChar + safeName(params.algorithm) + ".png");
         logger.log(Level.INFO, "saving heatmap to {0}", file.getAbsolutePath());
         String format = "png";
         try {
