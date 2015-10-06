@@ -33,7 +33,10 @@ import org.clueminer.dataset.plugin.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
 import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
+import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
+import org.clueminer.utils.DataFileInfo;
+import org.clueminer.utils.DatasetSniffer;
 import org.clueminer.utils.Props;
 import org.openide.util.Exceptions;
 
@@ -57,9 +60,19 @@ public class Runner implements Runnable {
             throw new InvalidArgumentException("can't read from file " + p.data);
         }
 
-        Dataset<? extends Instance> dataset = new ArrayDataset(150, 5);
+        Dataset<? extends Instance> dataset;
         int clsIndex = p.clsIndex;
         ArrayList<Integer> skip = new ArrayList<>(1);
+
+        DatasetSniffer sniffer = new DataSniffer();
+        DataFileInfo df = sniffer.scan(f);
+        if (p.type == null) {
+            p.type = df.type;
+        }
+        //guess number of attributes
+        //TODO: we should be able to estimate number of lines
+        dataset = new ArrayDataset(150, df.numAttributes);
+
         switch (p.type) {
             case "csv":
                 CsvLoader csvLoad = new CsvLoader();

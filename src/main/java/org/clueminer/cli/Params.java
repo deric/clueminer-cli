@@ -19,7 +19,7 @@ public class Params {
     public String data;
 
     @Parameter(names = {"--type", "-t"}, description = "type of data (csv, txt, arff)", required = false)
-    public String type = "csv";
+    public String type;
 
     @Parameter(names = "--separator", description = "separator of columns", required = false)
     public String separator = ",";
