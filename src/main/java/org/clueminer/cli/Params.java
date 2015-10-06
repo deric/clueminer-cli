@@ -69,4 +69,7 @@ public class Params {
     @Parameter(names = "--hint-k", description = "provide K parameter based on number of classes in the dataset", required = false)
     public boolean hintK = false;
 
+    @Parameter(names = {"--repeat", "-r"}, description = "number of repeated runs of the algorithm", required = false)
+    public int repeat = 1;
+
 }

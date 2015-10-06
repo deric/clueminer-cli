@@ -45,6 +45,7 @@ public class Runner implements Runnable {
     private final Params params;
     private char separator = ',';
     private static final Logger logger = Logger.getLogger(Runner.class.getName());
+    private StopWatch time;
 
     Runner(Params p) {
         this.params = p;
@@ -136,57 +137,63 @@ public class Runner implements Runnable {
         if (params.hintK) {
             prop.putInt(KMeans.K, dataset.getClasses().size());
         }
-        if (algorithm instanceof AgglomerativeClustering) {
-            //hierarchical result
-            Executor exec = new ClusteringExecutorCached();
-            exec.setAlgorithm(algorithm);
-            HierarchicalResult res = null;
-            DendrogramMapping mapping = null;
+        time = new StopWatch(false);
+        for (int run = 0; run < params.repeat; run++) {
+            if (algorithm instanceof AgglomerativeClustering) {
+                //hierarchical result
+                Executor exec = new ClusteringExecutorCached();
+                exec.setAlgorithm(algorithm);
+                HierarchicalResult res = null;
+                DendrogramMapping mapping = null;
 
-            prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
-            logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
-            switch (params.cluster) {
-                case "rows":
-                    res = exec.hclustRows(dataset, prop);
-                    mapping = new DendrogramData2(dataset, res);
-                    break;
-                case "columns":
-                    res = exec.hclustColumns(dataset, prop);
-                    mapping = new DendrogramData2(dataset, null, res);
-                    break;
-                case "both":
-                    mapping = exec.clusterAll(dataset, prop);
-                    res = mapping.getRowsResult();
-                    break;
-            }
-            if (res != null) {
-                if (params.matrix) {
-                    if (res.getProximityMatrix() != null) {
-                        res.getProximityMatrix().printLower(5, 2);
+                prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+                logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
+                time.startMeasure();
+                switch (params.cluster) {
+                    case "rows":
+                        res = exec.hclustRows(dataset, prop);
+                        mapping = new DendrogramData2(dataset, res);
+                        break;
+                    case "columns":
+                        res = exec.hclustColumns(dataset, prop);
+                        mapping = new DendrogramData2(dataset, null, res);
+                        break;
+                    case "both":
+                        mapping = exec.clusterAll(dataset, prop);
+                        res = mapping.getRowsResult();
+                        break;
+                }
+                time.endMeasure();
+                if (res != null) {
+                    if (params.matrix) {
+                        if (res.getProximityMatrix() != null) {
+                            res.getProximityMatrix().printLower(5, 2);
+                        }
+                    }
+                    if (params.tree) {
+                        res.getTreeData().print();
+                    }
+
+                    if (params.heatmap) {
+                        saveHeatmap(params, dataset, mapping);
                     }
                 }
-                if (params.tree) {
-                    res.getTreeData().print();
+                if (res != null && evals != null) {
+                    evaluate(res.getClustering(), evals, resultsFile(algorithm.getName(), dataset.getName()));
                 }
-
-                if (params.heatmap) {
-                    saveHeatmap(params, dataset, mapping);
-                }
+            } else {
+                //flat partitioning
+                time.startMeasure();
+                Clustering clustering = algorithm.cluster(dataset, prop);
+                time.endMeasure();
+                evaluate(clustering, evals, resultsFile(algorithm.getName(), dataset.getName()));
             }
-            if (res != null && evals != null) {
-                evaluate(res.getClustering(), evals, resultsFile(algorithm.getName()));
-            }
-        } else {
-            //flat partitioning
-            Clustering clustering = algorithm.cluster(dataset, prop);
-            evaluate(clustering, evals, resultsFile(algorithm.getName()));
+            logger.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
         }
-
-        logger.log(Level.INFO, "finished clustering: {0}", prop.toString());
     }
 
-    private File resultsFile(String uniqName) {
-        String path = ensureDir(uniqName) + File.separatorChar + "results.csv";
+    private File resultsFile(String uniqName, String fileName) {
+        String path = ensureDir(uniqName) + File.separatorChar + fileName + ".csv";
         return new File(path);
     }
 
@@ -198,33 +205,42 @@ public class Runner implements Runnable {
      * @param results
      */
     private void evaluate(Clustering clustering, ClusterEvaluation[] evals, File results) {
+        if (evals == null) {
+            return;
+        }
+        Dataset<? extends Instance> dataset = clustering.getLookup().lookup(Dataset.class);
+        if (dataset == null) {
+            throw new RuntimeException("dataset not in clustering lookup!");
+        }
         String[] line;
-        if (evals != null) {
-            Dataset<? extends Instance> dataset = clustering.getLookup().lookup(Dataset.class);
-            if (dataset == null) {
-                throw new RuntimeException("dataset not in clustering lookup!");
-            }
-            if (!results.exists()) {
-                line = new String[evals.length + 1];
-                line[0] = "dataset";
-                int i = 1;
-                for (ClusterEvaluation e : evals) {
-                    line[i++] = e.getName();
-                }
-                logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
-                writeCsvLine(results, line, false);
-            }
-            double score;
-            line = new String[evals.length + 1];
-            line[0] = dataset.getName();
+        int extraAttr = 3;
+        double score;
+
+        //header
+        if (!results.exists()) {
+            line = new String[evals.length + extraAttr];
+            line[0] = "dataset";
             int i = 1;
             for (ClusterEvaluation e : evals) {
-                score = e.score(clustering);
-                line[i++] = String.valueOf(score);
-                System.out.println(e.getName() + ": " + score);
+                line[i++] = e.getName();
             }
-            writeCsvLine(results, line, true);
+            line[i++] = "Time (s)";
+            line[i++] = "Params";
+            logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
+            writeCsvLine(results, line, false);
         }
+
+        line = new String[evals.length + extraAttr];
+        line[0] = dataset.getName();
+        int i = 1;
+        for (ClusterEvaluation e : evals) {
+            score = e.score(clustering);
+            line[i++] = String.valueOf(score);
+            System.out.println(e.getName() + ": " + score);
+        }
+        line[i++] = time.formatSec();
+        line[i++] = clustering.getParams().toString();
+        writeCsvLine(results, line, true);
     }
 
     public void writeCsvLine(File file, String[] columns, boolean apend) {
