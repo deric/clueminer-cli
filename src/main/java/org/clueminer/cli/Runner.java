@@ -238,14 +238,15 @@ public class Runner implements Runnable {
             throw new RuntimeException("dataset not in clustering lookup!");
         }
         String[] line;
-        int extraAttr = 3;
+        int extraAttr = 4;
         double score;
 
         //header
         if (!results.exists()) {
             line = new String[evals.length + extraAttr];
-            line[0] = "dataset";
-            int i = 1;
+            int i = 0;
+            line[i++] = "dataset";
+            line[i++] = "clusters";
             for (ClusterEvaluation e : evals) {
                 line[i++] = e.getName();
             }
@@ -256,8 +257,9 @@ public class Runner implements Runnable {
         }
 
         line = new String[evals.length + extraAttr];
-        line[0] = dataset.getName();
-        int i = 1;
+        int i = 0;
+        line[i++] = dataset.getName();
+        line[i++] = String.valueOf(clustering.size());
         for (ClusterEvaluation e : evals) {
             score = e.score(clustering);
             line[i++] = String.valueOf(score);
