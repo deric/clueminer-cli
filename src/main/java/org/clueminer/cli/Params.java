@@ -63,13 +63,19 @@ public class Params {
     @Parameter(names = "--height", description = "minimal height", required = false)
     public int height = 200;
 
-    @Parameter(names = {"--eval", "-e"}, description = "internal/external evaluation of resut; provide comma-separated metric names, e.g. 'NMI-sqrt,ARI'", required = false)
+    @Parameter(names = {"--eval", "-e"}, description = "internal/external evaluation of resut; provide comma-separated metric names, e.g. 'NMI-sqrt,ARI'")
     public String eval = "";
 
-    @Parameter(names = "--hint-k", description = "provide K parameter based on number of classes in the dataset", required = false)
+    @Parameter(names = "--hint-k", description = "provide K parameter based on number of classes in the dataset")
     public boolean hintK = false;
 
-    @Parameter(names = {"--repeat", "-r"}, description = "number of repeated runs of the algorithm", required = false)
+    @Parameter(names = {"--repeat", "-r"}, description = "number of repeated runs of the algorithm")
     public int repeat = 1;
+
+    @Parameter(names = {"--scatter", "-s"}, description = "save resulting scatterplot")
+    public boolean scatter = false;
+
+    @Parameter(names = {"--experiment", "-exp"}, description = "experiment name, will use {base dir}/{experiment} (by default algorithm name)")
+    public String experiment;
 
 }

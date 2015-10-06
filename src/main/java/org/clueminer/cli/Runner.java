@@ -16,6 +16,7 @@ import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.algorithm.KMeans;
 import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
+import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
@@ -42,9 +43,8 @@ import org.openide.util.Exceptions;
  */
 public class Runner implements Runnable {
 
-    private final Params params;
-    private char separator = ',';
     private static final Logger logger = Logger.getLogger(Runner.class.getName());
+    private final Params params;
     private StopWatch time;
 
     Runner(Params p) {
@@ -130,6 +130,9 @@ public class Runner implements Runnable {
         if (algorithm == null) {
             throw new RuntimeException("failed to load algorithm '" + params.algorithm + "'");
         }
+        if (params.experiment == null) {
+            params.experiment = safeName(params.algorithm);
+        }
 
         ClusterEvaluation[] evals = loadEvaluation(params.eval);
 
@@ -178,22 +181,31 @@ public class Runner implements Runnable {
                         saveHeatmap(params, dataset, mapping);
                     }
                 }
-                if (res != null && evals != null) {
-                    evaluate(res.getClustering(), evals, resultsFile(algorithm.getName(), dataset.getName()));
+                if (res != null) {
+                    Clustering clustering = res.getClustering();
+                    if (evals != null) {
+                        evaluate(clustering, evals, resultsFile(dataset.getName()));
+                    }
+                    if (run == 0 && params.scatter) {
+                        saveScatter(clustering, dataset.getName(), algorithm);
+                    }
                 }
             } else {
                 //flat partitioning
                 time.startMeasure();
                 Clustering clustering = algorithm.cluster(dataset, prop);
                 time.endMeasure();
-                evaluate(clustering, evals, resultsFile(algorithm.getName(), dataset.getName()));
+                evaluate(clustering, evals, resultsFile(dataset.getName()));
+                if (run == 0 && params.scatter) {
+                    saveScatter(clustering, dataset.getName(), algorithm);
+                }
             }
             logger.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
         }
     }
 
-    private File resultsFile(String uniqName, String fileName) {
-        String path = ensureDir(uniqName) + File.separatorChar + fileName + ".csv";
+    private File resultsFile(String fileName) {
+        String path = workDir() + File.separatorChar + fileName + ".csv";
         return new File(path);
     }
 
@@ -224,7 +236,7 @@ public class Runner implements Runnable {
             for (ClusterEvaluation e : evals) {
                 line[i++] = e.getName();
             }
-            line[i++] = "Time (s)";
+            line[i++] = "Time (ms)";
             line[i++] = "Params";
             logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
             writeCsvLine(results, line, false);
@@ -238,7 +250,7 @@ public class Runner implements Runnable {
             line[i++] = String.valueOf(score);
             System.out.println(e.getName() + ": " + score);
         }
-        line[i++] = time.formatSec();
+        line[i++] = time.formatMs();
         line[i++] = clustering.getParams().toString();
         writeCsvLine(results, line, true);
     }
@@ -248,7 +260,7 @@ public class Runner implements Runnable {
                 new FileOutputStream(file, apend)
         )) {
 
-            CSVWriter csv = new CSVWriter(writer, separator);
+            CSVWriter csv = new CSVWriter(writer, params.separator.charAt(0));
             csv.writeNext(columns, false);
             writer.close();
 
@@ -274,31 +286,6 @@ public class Runner implements Runnable {
         return evals;
     }
 
-    /**
-     * Create directory inside working dir
-     *
-     * @param name
-     * @return
-     */
-    private String ensureDir(String name) {
-        if (name == null || name.isEmpty()) {
-            RandomString rand = new RandomString(8);
-            name = rand.nextString();
-        }
-        String path = params.home + File.separatorChar + name;
-        return mkdir(path);
-    }
-
-    public String mkdir(String folder) {
-        File file = new File(folder);
-        if (!file.exists()) {
-            if (!file.mkdirs()) {
-                throw new RuntimeException("Failed to create " + folder + " !");
-            }
-        }
-        return file.getAbsolutePath();
-    }
-
     private void saveHeatmap(Params params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
         DgViewer panel = new DgViewer();
         panel.setDataset(mapping);
@@ -309,7 +296,7 @@ public class Runner implements Runnable {
         logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);
 
-        File file = new File(ensureDir(dataset.getName()) + File.separatorChar + safeName(params.algorithm) + ".png");
+        File file = new File(FileUtil.ensureDir(dataset.getName(), params) + File.separatorChar + safeName(params.algorithm) + ".png");
         logger.log(Level.INFO, "saving heatmap to {0}", file.getAbsolutePath());
         String format = "png";
         try {
@@ -321,6 +308,21 @@ public class Runner implements Runnable {
 
     public static String safeName(String name) {
         return name.toLowerCase().replace(" ", "_");
+    }
+
+    public String workDir() {
+        String path = params.home + File.separatorChar + params.experiment;
+        return FileUtil.mkdir(path);
+    }
+
+    private void saveScatter(Clustering clustering, String subdir, ClusteringAlgorithm algorithm) {
+        if (params.scatter) {
+            String dir = FileUtil.mkdir(workDir() + File.separatorChar + subdir);
+            logger.log(Level.INFO, "writing scatter to {0}", dir);
+            GnuplotScatter<Instance, Cluster<Instance>> scatter = new GnuplotScatter<>(dir);
+            String title = algorithm.getName() + " - " + clustering.getParams().toString();
+            scatter.plot(clustering, title);
+        }
     }
 
 }
