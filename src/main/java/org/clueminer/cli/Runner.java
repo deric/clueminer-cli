@@ -21,7 +21,6 @@ import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
 import org.clueminer.clustering.api.ClusteringFactory;
-import org.clueminer.clustering.api.Executor;
 import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
 import org.clueminer.clustering.api.factory.EvaluationFactory;
@@ -133,6 +132,10 @@ public class Runner implements Runnable {
             throw new RuntimeException("failed to load any data");
         }
 
+        if (dataset.getName() == null) {
+            throw new RuntimeException("missing dataset name");
+        }
+
         logger.log(Level.INFO, "loaded dataset \"{2}\" with {0} instances, {1} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
         ClusteringAlgorithm algorithm = parseAlgorithm(params);
@@ -160,21 +163,25 @@ public class Runner implements Runnable {
             prop.putInt(KMeans.K, dataset.getClasses().size());
         }
         time = new StopWatch(false);
+        Clustering clustering;
         for (int run = 0; run < params.repeat; run++) {
             if (algorithm instanceof AgglomerativeClustering) {
                 //hierarchical result
-                Executor exec = new ClusteringExecutorCached();
+                ClusteringExecutorCached exec = new ClusteringExecutorCached();
                 exec.setAlgorithm(algorithm);
                 HierarchicalResult res = null;
                 DendrogramMapping mapping = null;
 
-                prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+                if (!prop.containsKey(AgglParams.CUTOFF_STRATEGY)) {
+                    prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+                }
                 logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
                 time.startMeasure();
                 switch (params.cluster) {
                     case "rows":
-                        res = exec.hclustRows(dataset, prop);
-                        mapping = new DendrogramData2(dataset, res);
+                        clustering = exec.clusterRows(dataset, prop);
+                        mapping = clustering.getLookup().lookup(DendrogramData2.class);
+                        res = mapping.getRowsResult();
                         break;
                     case "columns":
                         res = exec.hclustColumns(dataset, prop);
@@ -201,7 +208,7 @@ public class Runner implements Runnable {
                     }
                 }
                 if (res != null) {
-                    Clustering clustering = res.getClustering();
+                    clustering = res.getClustering();
                     if (evals != null) {
                         evaluate(clustering, evals, resultsFile(dataset.getName()));
                     }
@@ -212,7 +219,7 @@ public class Runner implements Runnable {
             } else {
                 //flat partitioning
                 time.startMeasure();
-                Clustering clustering = algorithm.cluster(dataset, prop);
+                clustering = algorithm.cluster(dataset, prop);
                 time.endMeasure();
                 evaluate(clustering, evals, resultsFile(dataset.getName()));
                 if (run == 0 && params.scatter) {
