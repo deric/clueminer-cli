@@ -323,8 +323,8 @@ public class Runner implements Runnable {
         int height = (int) (params.height + dataset.size() * mult);
         logger.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);
-
-        File file = new File(FileUtil.ensureDir(dataset.getName(), params) + File.separatorChar + safeName(params.algorithm) + ".png");
+        String path = FileUtil.mkdir(workDir() + File.separatorChar + dataset.getName());
+        File file = new File(path + File.separatorChar + safeName(params.algorithm) + ".png");
         logger.log(Level.INFO, "saving heatmap to {0}", file.getAbsolutePath());
         String format = "png";
         try {
