@@ -149,7 +149,13 @@ public class Runner implements Runnable {
 
         ClusterEvaluation[] evals = loadEvaluation(params.eval);
 
-        Props prop = new Props();
+        Props prop;
+        if (params.algParams != null) {
+            prop = Props.fromJson(params.algParams);
+        } else {
+            prop = new Props();
+        }
+
         if (params.hintK) {
             prop.putInt(KMeans.K, dataset.getClasses().size());
         }
@@ -266,7 +272,7 @@ public class Runner implements Runnable {
             System.out.println(e.getName() + ": " + score);
         }
         line[i++] = time.formatMs();
-        line[i++] = clustering.getParams().toString();
+        line[i++] = clustering.getParams().toJson();
         writeCsvLine(results, line, true);
     }
 
