@@ -8,7 +8,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -35,6 +37,11 @@ import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
+import org.clueminer.knn.LinearSearch;
+import org.clueminer.neighbor.KNNSearch;
+import org.clueminer.neighbor.Neighbor;
+import org.clueminer.plot.GnuplotLinePlot;
+import org.clueminer.plot.GnuplotScatter;
 import org.clueminer.utils.DataFileInfo;
 import org.clueminer.utils.DatasetSniffer;
 import org.clueminer.utils.Props;
@@ -235,8 +242,10 @@ public class Runner implements Runnable {
         Clustering clustering = null;
         Clustering curr;
         double maxScore = 0.0, score;
-        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("PointBiserial");
+        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
+        guessEps(dataset);
         //flat partitioning
+        int cnt = 0;
         if (algorithm instanceof DBSCAN) {
             //we have to guess parameters
             double eps;
@@ -252,6 +261,7 @@ public class Runner implements Runnable {
                         maxScore = score;
                         clustering = curr;
                     }
+                    cnt++;
                     eps += 0.1; //eps increment
                     if (curr.size() == 1) {
                         break;
@@ -266,7 +276,31 @@ public class Runner implements Runnable {
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
+        } else {
+            logger.log(Level.WARNING, "failed to find solution. evaluated {0} clusterings", new Object[]{cnt});
         }
+    }
+
+    private void guessEps(Dataset<? extends Instance> dataset) {
+        //k-dist graph data
+        KNNSearch<Instance> knn = new LinearSearch(dataset);
+        PriorityQueue<Double> pq = new PriorityQueue<>(dataset.size(), Collections.reverseOrder());
+        int k = 4;
+        double dist;
+        Neighbor[] neighbors;
+        for (int i = 0; i < dataset.size(); i++) {
+            neighbors = knn.knn(dataset.get(i), k);
+            dist = neighbors[k - 1].distance;
+            pq.add(dist);
+        }
+
+
+        //plot k-dist
+        GnuplotLinePlot chart = new GnuplotLinePlot(workDir() + File.separatorChar + dataset.getName());
+        chart.plot(pq, dataset, "4-dist plot " + dataset.getName());
+
+
+
     }
 
     private File resultsFile(String fileName) {

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.clueminer.cli;
+package org.clueminer.plot;
 
 import au.com.bytecode.opencsv.CSVWriter;
 import java.io.File;
@@ -39,12 +39,11 @@ import org.openide.util.Exceptions;
  * @param <E>
  * @param <C>
  */
-public class GnuplotScatter<E extends Instance, C extends Cluster<E>> {
+public class GnuplotScatter<E extends Instance, C extends Cluster<E>> extends BasePlot {
 
-    private final String baseFolder;
 
     public GnuplotScatter(String folder) {
-        this.baseFolder = FileUtil.mkdir(folder);
+        super(folder);
     }
 
     public void plot(Clustering<E, C> clustering, String title) {
@@ -79,11 +78,6 @@ public class GnuplotScatter<E extends Instance, C extends Cluster<E>> {
      */
     protected int triangleSize(int n) {
         return ((n - 1) * n) >>> 1;
-    }
-
-    private String getDataDir(String dir) {
-        String dataDir = dir + File.separatorChar + "data";
-        return FileUtil.mkdir(dataDir);
     }
 
     private String writePlot(int idx, String title, int x, int y, Clustering<E, C> clustering, String dataFile, Dataset<E> dataset) {
