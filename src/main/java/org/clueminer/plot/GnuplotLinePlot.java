@@ -50,8 +50,8 @@ public class GnuplotLinePlot<E extends Instance, C extends Cluster<E>> extends B
         plots[0] = script + gnuplotExtension;
 
         try {
-            GnuplotHelper.bashPlotScript(plots, baseFolder, dataFolder, "set term pdf font 'Times-New-Roman,8'", "pdf");
-            GnuplotHelper.bashPlotScript(plots, baseFolder, dataFolder, "set terminal pngcairo size 800,600 enhanced font 'Verdana,10'", "png");
+            bashPlotScript(plots, baseFolder, dataFolder, "set term pdf font 'Times-New-Roman,8'", "pdf");
+            bashPlotScript(plots, baseFolder, dataFolder, "set terminal pngcairo size 800,600 enhanced font 'Verdana,10'", "png");
         } catch (UnsupportedEncodingException ex) {
             Exceptions.printStackTrace(ex);
         } catch (IOException ex) {

@@ -17,7 +17,13 @@
 package org.clueminer.plot;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import org.clueminer.cli.FileUtil;
+import org.clueminer.gnuplot.GnuplotHelper;
+import static org.clueminer.gnuplot.GnuplotHelper.gnuplotExtension;
 
 /**
  *
@@ -35,6 +41,38 @@ public class BasePlot {
     public String getDataDir(String dir) {
         String dataDir = dir + File.separatorChar + dataFolder;
         return FileUtil.mkdir(dataDir);
+    }
+
+    /**
+     *
+     * @param plots plot names without extension
+     * @param dir base dir
+     * @param gnuplotDir directory with gnuplot file
+     * @param term
+     * @param ext extentions of output format
+     * @throws FileNotFoundException
+     * @throws UnsupportedEncodingException
+     * @throws IOException
+     */
+    public static void bashPlotScript(String[] plots, String dir, String gnuplotDir, String term, String ext)
+            throws FileNotFoundException, UnsupportedEncodingException, IOException {
+        //bash script to generate results
+        String shFile = dir + File.separatorChar + "_plot-" + ext;
+        try (PrintWriter template = new PrintWriter(shFile, "UTF-8")) {
+            template.write(GnuplotHelper.bashTemplate(gnuplotDir));
+            template.write("TERM=\"" + term + "\"\n");
+            int pos;
+            for (String plot : plots) {
+                pos = plot.indexOf(".");
+                if (pos > 0) {
+                    //remove extension part
+                    plot = plot.substring(0, pos);
+                }
+                template.write("gnuplot -e \"${TERM}\" " + "$PWD" + File.separatorChar + plot + gnuplotExtension
+                        + " > $PWD" + File.separatorChar + ".." + File.separatorChar + plot + "." + ext + "\n");
+            }
+        }
+        Runtime.getRuntime().exec("chmod u+x " + shFile);
     }
 
 }
