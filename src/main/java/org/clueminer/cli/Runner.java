@@ -8,9 +8,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map.Entry;
-import java.util.PriorityQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -284,23 +284,40 @@ public class Runner implements Runnable {
     private void guessEps(Dataset<? extends Instance> dataset) {
         //k-dist graph data
         KNNSearch<Instance> knn = new LinearSearch(dataset);
-        PriorityQueue<Double> pq = new PriorityQueue<>(dataset.size(), Collections.reverseOrder());
         int k = 4;
-        double dist;
         Neighbor[] neighbors;
+        Double[] kdist = new Double[dataset.size()];
         for (int i = 0; i < dataset.size(); i++) {
             neighbors = knn.knn(dataset.get(i), k);
-            dist = neighbors[k - 1].distance;
-            pq.add(dist);
+            kdist[i] = neighbors[k - 1].distance;
         }
-
+        Arrays.sort(kdist, 0, kdist.length - 1, Collections.reverseOrder());
+        int knee = findKnee(kdist);
+        System.out.println("max idx = " + knee);
 
         //plot k-dist
         GnuplotLinePlot chart = new GnuplotLinePlot(workDir() + File.separatorChar + dataset.getName());
-        chart.plot(pq, dataset, "4-dist plot " + dataset.getName());
+        chart.plot(kdist, dataset, knee, "4-dist plot " + dataset.getName());
+    }
 
-
-
+    private int findKnee(Double[] kdist) {
+        double dx, dx2, kx;
+        double max = Double.MIN_VALUE;
+        int maxIdx = 0;
+        for (int i = 1; i < kdist.length - 2; i++) {
+            //first derivative
+            dx = kdist[i + 1] - kdist[i];
+            //second derivative
+            dx2 = kdist[i + 1] - 2 * kdist[i] + kdist[i - 1];
+            kx = dx2 / Math.pow(0.5 + Math.pow(dx, 2), 1.5);
+            if (kx == 0.0) {
+                max = kx;
+                maxIdx = i;
+            }
+            System.out.println(i + " => " + kx + ", max = " + max);
+        }
+        System.out.println("max = " + max + ", at " + maxIdx);
+        return maxIdx;
     }
 
     private File resultsFile(String fileName) {
