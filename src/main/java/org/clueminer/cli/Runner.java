@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.clueminer.clustering.ClusteringExecutorCached;
+import org.clueminer.clustering.algorithm.DBSCAN;
 import org.clueminer.clustering.algorithm.KMeans;
 import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
@@ -217,16 +218,54 @@ public class Runner implements Runnable {
                     }
                 }
             } else {
-                //flat partitioning
-                time.startMeasure();
-                clustering = algorithm.cluster(dataset, prop);
-                time.endMeasure();
-                evaluate(clustering, evals, resultsFile(dataset.getName()));
-                if (run == 0 && params.scatter) {
-                    saveScatter(clustering, dataset.getName(), algorithm);
-                }
+                flatPartitioning(dataset, prop, algorithm, evals, run);
             }
             logger.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
+        }
+    }
+
+    private Clustering cluster(Dataset<? extends Instance> dataset, Props prop, ClusteringAlgorithm algorithm) {
+        time.startMeasure();
+        Clustering clustering = algorithm.cluster(dataset, prop);
+        time.endMeasure();
+        return clustering;
+    }
+
+    private void flatPartitioning(Dataset<? extends Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+        Clustering clustering = null;
+        Clustering curr;
+        double maxScore = 0.0, score;
+        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("PointBiserial");
+        //flat partitioning
+        if (algorithm instanceof DBSCAN) {
+            //we have to guess parameters
+            double eps;
+            for (int i = 4; i < 10; i++) {
+                prop.putInt(DBSCAN.MIN_PTS, i);
+                eps = 0.1;
+                while (eps < 7) {
+                    prop.putDouble(DBSCAN.EPS, eps);
+                    curr = cluster(dataset, prop, algorithm);
+                    score = eval.score(curr, prop);
+                    System.out.println("eps = " + eps + " minPts = " + i + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
+                    if (eval.isBetter(score, maxScore)) {
+                        maxScore = score;
+                        clustering = curr;
+                    }
+                    eps += 0.1; //eps increment
+                    if (curr.size() == 1) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            clustering = cluster(dataset, prop, algorithm);
+        }
+        if (clustering != null) {
+            evaluate(clustering, evals, resultsFile(dataset.getName()));
+            if (run == 0 && params.scatter) {
+                saveScatter(clustering, dataset.getName(), algorithm);
+            }
         }
     }
 
