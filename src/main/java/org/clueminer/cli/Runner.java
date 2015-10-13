@@ -260,14 +260,13 @@ public class Runner implements Runnable {
         System.out.println("min = " + epsMin + ", max = " + epsMax);
         //flat partitioning
         int cnt = 0;
-        int maxIter;
+        int maxSize = (int) Math.sqrt(dataset.size());
         if (algorithm instanceof DBSCAN) {
             //we have to guess parameters
             double eps;
             for (int i = 4; i <= 10; i++) {
                 prop.putInt(DBSCAN.MIN_PTS, i);
                 eps = epsMax;
-                maxIter = 0;
                 while (eps > epsMin) {
                     prop.putDouble(DBSCAN.EPS, eps);
                     curr = cluster(dataset, prop, algorithm);
@@ -280,9 +279,8 @@ public class Runner implements Runnable {
                         bestPts = i;
                     }
                     cnt++;
-                    maxIter++;
                     eps -= step; //eps increment
-                    if (curr.size() == 1 || maxIter > 6) {
+                    if (curr.size() == 1 || curr.size() >= maxSize) {
                         break;
                     }
                 }
