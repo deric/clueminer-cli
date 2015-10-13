@@ -225,7 +225,7 @@ public class Runner implements Runnable {
                     }
                 }
             } else {
-                flatPartitioning(dataset, prop, algorithm, evals, run);
+                prop = flatPartitioning(dataset, prop, algorithm, evals, run);
             }
             logger.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
         }
@@ -238,12 +238,16 @@ public class Runner implements Runnable {
         return clustering;
     }
 
-    private void flatPartitioning(Dataset<? extends Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+    private Props flatPartitioning(Dataset<? extends Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering = null;
         Clustering curr;
         double maxScore = 0.0, score;
         ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
-        guessEps(dataset);
+        Double[] kdist = guessEps(dataset);
+        double epsMax = kdist[0];
+        double epsMin = kdist[kdist.length - 1];
+        double step = (epsMax - epsMin) / 5.0;
+        System.out.println("min = " + epsMin + ", max = " + epsMax);
         //flat partitioning
         int cnt = 0;
         if (algorithm instanceof DBSCAN) {
@@ -251,8 +255,8 @@ public class Runner implements Runnable {
             double eps;
             for (int i = 4; i < 10; i++) {
                 prop.putInt(DBSCAN.MIN_PTS, i);
-                eps = 0.1;
-                while (eps < 7) {
+                eps = epsMax;
+                while (eps > epsMin) {
                     prop.putDouble(DBSCAN.EPS, eps);
                     curr = cluster(dataset, prop, algorithm);
                     score = eval.score(curr, prop);
@@ -262,7 +266,7 @@ public class Runner implements Runnable {
                         clustering = curr;
                     }
                     cnt++;
-                    eps += 0.1; //eps increment
+                    eps -= step; //eps increment
                     if (curr.size() == 1) {
                         break;
                     }
@@ -276,12 +280,14 @@ public class Runner implements Runnable {
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
+            return clustering.getParams();
         } else {
             logger.log(Level.WARNING, "failed to find solution. evaluated {0} clusterings", new Object[]{cnt});
         }
+        return prop;
     }
 
-    private void guessEps(Dataset<? extends Instance> dataset) {
+    private Double[] guessEps(Dataset<? extends Instance> dataset) {
         //k-dist graph data
         KNNSearch<Instance> knn = new LinearSearch(dataset);
         int k = 4;
@@ -292,12 +298,13 @@ public class Runner implements Runnable {
             kdist[i] = neighbors[k - 1].distance;
         }
         Arrays.sort(kdist, 0, kdist.length - 1, Collections.reverseOrder());
+
         int knee = findKnee(kdist);
         System.out.println("max idx = " + knee);
-
         //plot k-dist
         GnuplotLinePlot chart = new GnuplotLinePlot(workDir() + File.separatorChar + dataset.getName());
         chart.plot(kdist, dataset, knee, "4-dist plot " + dataset.getName());
+        return kdist;
     }
 
     private int findKnee(Double[] kdist) {
@@ -314,7 +321,7 @@ public class Runner implements Runnable {
                 max = kx;
                 maxIdx = i;
             }
-            System.out.println(i + " => " + kx + ", max = " + max);
+            //System.out.println(i + " => " + kx + ", max = " + max);
         }
         System.out.println("max = " + max + ", at " + maxIdx);
         return maxIdx;
