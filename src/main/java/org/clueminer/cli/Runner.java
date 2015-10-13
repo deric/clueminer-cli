@@ -8,14 +8,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.algorithm.DBSCAN;
+import org.clueminer.clustering.algorithm.DBSCANParamEstim;
 import org.clueminer.clustering.algorithm.KMeans;
 import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
@@ -37,9 +36,6 @@ import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
-import org.clueminer.knn.LinearSearch;
-import org.clueminer.neighbor.KNNSearch;
-import org.clueminer.neighbor.Neighbor;
 import org.clueminer.plot.GnuplotLinePlot;
 import org.clueminer.plot.GnuplotScatter;
 import org.clueminer.utils.DataFileInfo;
@@ -74,7 +70,11 @@ public class Runner implements Runnable {
         DatasetSniffer sniffer = new DataSniffer();
         DataFileInfo df = sniffer.scan(f);
         if (p.type == null) {
-            p.type = df.type;
+            if (df.type == null) {
+                p.type = "arff";
+            } else {
+                p.type = df.type;
+            }
         }
         //guess number of attributes
         //TODO: we should be able to estimate number of lines
@@ -225,7 +225,7 @@ public class Runner implements Runnable {
                     }
                 }
             } else {
-                prop = flatPartitioning(dataset, prop, algorithm, evals, run);
+                prop = flatPartitioning((Dataset<Instance>) dataset, prop, algorithm, evals, run);
             }
             logger.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
         }
@@ -238,15 +238,25 @@ public class Runner implements Runnable {
         return clustering;
     }
 
-    private Props flatPartitioning(Dataset<? extends Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+    private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering = null;
         Clustering curr;
         double maxScore = 0.0, score;
         ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
-        Double[] kdist = guessEps(dataset);
-        double epsMax = kdist[0];
-        double epsMin = kdist[kdist.length - 1];
+
+        DBSCANParamEstim<Instance> dbscanParam = new DBSCANParamEstim();
+        dbscanParam.estimate((Dataset<Instance>) dataset, prop);
+
+
+        //plot k-dist
+        GnuplotLinePlot<Instance, Cluster<Instance>> chart = new GnuplotLinePlot<>(workDir() + File.separatorChar + dataset.getName());
+        chart.plot(dbscanParam, dataset, "4-dist plot " + dataset.getName());
+
+        double epsMax = dbscanParam.getMaxEps();
+        double epsMin = dbscanParam.getMinEps();
         double step = (epsMax - epsMin) / 10.0;
+        double bestEps = 0;
+        int bestPts = 0;
         System.out.println("min = " + epsMin + ", max = " + epsMax);
         //flat partitioning
         int cnt = 0;
@@ -266,11 +276,13 @@ public class Runner implements Runnable {
                     if (eval.isBetter(score, maxScore)) {
                         maxScore = score;
                         clustering = curr;
+                        bestEps = eps;
+                        bestPts = i;
                     }
                     cnt++;
                     maxIter++;
                     eps -= step; //eps increment
-                    if (curr.size() == 1 || maxIter > 3) {
+                    if (curr.size() == 1 || maxIter > 6) {
                         break;
                     }
                 }
@@ -279,6 +291,8 @@ public class Runner implements Runnable {
             clustering = cluster(dataset, prop, algorithm);
         }
         if (clustering != null) {
+            prop.putDouble(DBSCAN.EPS, bestEps);
+            prop.putInt(DBSCAN.MIN_PTS, bestPts);
             evaluate(clustering, evals, resultsFile(dataset.getName()));
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
@@ -288,46 +302,6 @@ public class Runner implements Runnable {
             logger.log(Level.WARNING, "failed to find solution. evaluated {0} clusterings", new Object[]{cnt});
         }
         return prop;
-    }
-
-    private Double[] guessEps(Dataset<? extends Instance> dataset) {
-        //k-dist graph data
-        KNNSearch<Instance> knn = new LinearSearch(dataset);
-        int k = 4;
-        Neighbor[] neighbors;
-        Double[] kdist = new Double[dataset.size()];
-        for (int i = 0; i < dataset.size(); i++) {
-            neighbors = knn.knn(dataset.get(i), k);
-            kdist[i] = neighbors[k - 1].distance;
-        }
-        Arrays.sort(kdist, 0, kdist.length - 1, Collections.reverseOrder());
-
-        int knee = findKnee(kdist);
-        System.out.println("max idx = " + knee);
-        //plot k-dist
-        GnuplotLinePlot chart = new GnuplotLinePlot(workDir() + File.separatorChar + dataset.getName());
-        chart.plot(kdist, dataset, knee, "4-dist plot " + dataset.getName());
-        return kdist;
-    }
-
-    private int findKnee(Double[] kdist) {
-        double dx, dx2, kx;
-        double max = Double.MIN_VALUE;
-        int maxIdx = 0;
-        for (int i = 1; i < kdist.length - 2; i++) {
-            //first derivative
-            dx = kdist[i + 1] - kdist[i];
-            //second derivative
-            dx2 = kdist[i + 1] - 2 * kdist[i] + kdist[i - 1];
-            kx = dx2 / Math.pow(0.5 + Math.pow(dx, 2), 1.5);
-            if (kx == 0.0) {
-                max = kx;
-                maxIdx = i;
-            }
-            //System.out.println(i + " => " + kx + ", max = " + max);
-        }
-        System.out.println("max = " + max + ", at " + maxIdx);
-        return maxIdx;
     }
 
     private File resultsFile(String fileName) {

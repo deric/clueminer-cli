@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import org.clueminer.clustering.algorithm.DBSCANParamEstim;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
@@ -39,11 +40,11 @@ public class GnuplotLinePlot<E extends Instance, C extends Cluster<E>> extends B
         super(base);
     }
 
-    public void plot(Double[] dist, Dataset<E> dataset, int max, String title) {
+    public void plot(DBSCANParamEstim<E> dbscanParam, Dataset<E> dataset, String title) {
         String absDir = getDataDir(baseFolder);
-        String dataFile = writeData(absDir, dist, dataset);
+        String dataFile = writeData(absDir, dbscanParam, dataset);
         String script = "k-dist";
-        GnuplotHelper.writeGnuplot(absDir, script, generatePlot(title, 1, 2, max, dataFile));
+        GnuplotHelper.writeGnuplot(absDir, script, generatePlot(title, 1, 2, dbscanParam.getKnee(), dataFile));
 
         String[] plots = new String[1];
         plots[0] = script + gnuplotExtension;
@@ -58,13 +59,16 @@ public class GnuplotLinePlot<E extends Instance, C extends Cluster<E>> extends B
         }
     }
 
-    private String writeData(String dataDir, Double[] dist, Dataset<E> dataset) {
+    private String writeData(String dataDir, DBSCANParamEstim<E> dbscanParam, Dataset<E> dataset) {
+        double slope = dbscanParam.getSlope();
+        Double[] dist = dbscanParam.getKdist();
+
         File file = new File(dataDir + File.separatorChar + "kdist_data.csv");
         try (PrintWriter writer = new PrintWriter(
                 new FileOutputStream(file, false)
         )) {
-            for (int i = 0; i < dataset.size(); i++) {
-                writer.write(i + "," + dist[i] + "," + func(dist, i) + "\n");
+            for (int i = 0; i < dataset.size() - 1; i++) {
+                writer.write(i + "," + dist[i] + "," + dbscanParam.ref(dist, i, slope) + "\n");
             }
             writer.close();
 
@@ -72,19 +76,6 @@ public class GnuplotLinePlot<E extends Instance, C extends Cluster<E>> extends B
             Exceptions.printStackTrace(ex);
         }
         return file.getName();
-    }
-
-    public double func(Double[] kdist, int i) {
-        if (i == 0 || i > kdist.length - 3) {
-            return 0.0;
-        }
-        double dx, dx2, kx;
-        //first derivative
-        dx = kdist[i + 1] - kdist[i];
-        //second derivative
-        dx2 = kdist[i + 1] - 2 * kdist[i] + kdist[i - 1];
-        kx = dx2 / Math.pow(0.5 + Math.pow(dx, 2), 1.5);
-        return kx;
     }
 
     private String generatePlot(String title, int x, int y, int max, String dataFile) {
@@ -103,7 +94,7 @@ public class GnuplotLinePlot<E extends Instance, C extends Cluster<E>> extends B
                 + "set pointsize 0.5\n";
 
         res += "plot '" + dataFile + "' u " + x + ":" + y + " title '4-dist' with linespoints linewidth 2 pointtype 7 pointsize 0.3,\\\n"
-                + "'' u 1:3 title 'kx' with linespoints linewidth 2 pointtype 8 pointsize 0.3";
+                + "'' u 1:3 title 'kx' with linespoints linewidth 1 pointtype 8 pointsize 0.3";
         return res;
     }
 }
