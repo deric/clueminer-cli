@@ -246,16 +246,18 @@ public class Runner implements Runnable {
         Double[] kdist = guessEps(dataset);
         double epsMax = kdist[0];
         double epsMin = kdist[kdist.length - 1];
-        double step = (epsMax - epsMin) / 5.0;
+        double step = (epsMax - epsMin) / 10.0;
         System.out.println("min = " + epsMin + ", max = " + epsMax);
         //flat partitioning
         int cnt = 0;
+        int maxIter;
         if (algorithm instanceof DBSCAN) {
             //we have to guess parameters
             double eps;
-            for (int i = 4; i < 10; i++) {
+            for (int i = 4; i <= 10; i++) {
                 prop.putInt(DBSCAN.MIN_PTS, i);
                 eps = epsMax;
+                maxIter = 0;
                 while (eps > epsMin) {
                     prop.putDouble(DBSCAN.EPS, eps);
                     curr = cluster(dataset, prop, algorithm);
@@ -266,8 +268,9 @@ public class Runner implements Runnable {
                         clustering = curr;
                     }
                     cnt++;
+                    maxIter++;
                     eps -= step; //eps increment
-                    if (curr.size() == 1) {
+                    if (curr.size() == 1 || maxIter > 3) {
                         break;
                     }
                 }
