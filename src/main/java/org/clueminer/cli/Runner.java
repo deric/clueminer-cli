@@ -241,27 +241,28 @@ public class Runner implements Runnable {
     private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering = null;
         Clustering curr;
-        double maxScore = 0.0, score;
-        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
-
-        DBSCANParamEstim<Instance> dbscanParam = new DBSCANParamEstim();
-        dbscanParam.estimate((Dataset<Instance>) dataset, prop);
-
-
-        //plot k-dist
-        GnuplotLinePlot<Instance, Cluster<Instance>> chart = new GnuplotLinePlot<>(workDir() + File.separatorChar + dataset.getName());
-        chart.plot(dbscanParam, dataset, "4-dist plot " + dataset.getName());
-
-        double epsMax = dbscanParam.getMaxEps();
-        double epsMin = dbscanParam.getMinEps();
-        double step = (epsMax - epsMin) / 10.0;
         double bestEps = 0;
         int bestPts = 0;
-        System.out.println("min = " + epsMin + ", max = " + epsMax);
+
         //flat partitioning
         int cnt = 0;
-        int maxSize = (int) Math.sqrt(dataset.size());
         if (algorithm instanceof DBSCAN) {
+            int maxSize = (int) Math.sqrt(dataset.size());
+            double maxScore = 0.0, score;
+            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
+
+            DBSCANParamEstim<Instance> dbscanParam = new DBSCANParamEstim();
+            dbscanParam.estimate((Dataset<Instance>) dataset, prop);
+
+            //plot k-dist
+            GnuplotLinePlot<Instance, Cluster<Instance>> chart = new GnuplotLinePlot<>(workDir() + File.separatorChar + dataset.getName());
+            chart.plot(dbscanParam, dataset, "4-dist plot " + dataset.getName());
+
+            double epsMax = dbscanParam.getMaxEps();
+            double epsMin = dbscanParam.getMinEps();
+            double step = (epsMax - epsMin) / 10.0;
+
+            System.out.println("min = " + epsMin + ", max = " + epsMax);
             //we have to guess parameters
             double eps;
             for (int i = 4; i <= 10; i++) {
