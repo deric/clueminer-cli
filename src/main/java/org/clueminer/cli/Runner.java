@@ -16,6 +16,7 @@ import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.algorithm.DBSCAN;
 import org.clueminer.clustering.algorithm.DBSCANParamEstim;
 import org.clueminer.clustering.algorithm.KMeans;
+import org.clueminer.clustering.algorithm.cure.CURE;
 import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
 import org.clueminer.clustering.api.Cluster;
@@ -241,12 +242,11 @@ public class Runner implements Runnable {
     private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering = null;
         Clustering curr;
-        double bestEps = 0;
-        int bestPts = 0;
-
         //flat partitioning
         int cnt = 0;
         if (algorithm instanceof DBSCAN) {
+            double bestEps = 0;
+            int bestPts = 0;
             int maxSize = (int) Math.sqrt(dataset.size());
             double maxScore = 0.0, score;
             ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
@@ -286,12 +286,32 @@ public class Runner implements Runnable {
                     }
                 }
             }
+            prop.putDouble(DBSCAN.EPS, bestEps);
+            prop.putInt(DBSCAN.MIN_PTS, bestPts);
+        } else if (algorithm instanceof CURE) {
+            //we don't have any heuristic for CURE yet
+            double maxScore = 0.0, score;
+            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
+            double shrink = 0.1;
+            double bestShrink = 0;
+            while (shrink < 1.0) {
+                prop.putDouble(CURE.SHRINK_FACTOR, shrink);
+                curr = cluster(dataset, prop, algorithm);
+                score = eval.score(curr, prop);
+                System.out.println("shrink = " + shrink + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
+                if (eval.isBetter(score, maxScore)) {
+                    maxScore = score;
+                    clustering = curr;
+                    bestShrink = shrink;
+                }
+                cnt++;
+                shrink += 0.1; //eps increment
+            }
+            prop.put(CURE.SHRINK_FACTOR, bestShrink);
         } else {
             clustering = cluster(dataset, prop, algorithm);
         }
         if (clustering != null) {
-            prop.putDouble(DBSCAN.EPS, bestEps);
-            prop.putInt(DBSCAN.MIN_PTS, bestPts);
             evaluate(clustering, evals, resultsFile(dataset.getName()));
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
