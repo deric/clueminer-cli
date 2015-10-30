@@ -27,7 +27,7 @@ import org.clueminer.clustering.api.ClusteringFactory;
 import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
 import org.clueminer.clustering.api.factory.EvaluationFactory;
-import org.clueminer.clustering.struct.DendrogramData2;
+import org.clueminer.clustering.struct.DendrogramData;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
@@ -189,12 +189,12 @@ public class Runner implements Runnable {
                 switch (params.cluster) {
                     case "rows":
                         clustering = exec.clusterRows(dataset, prop);
-                        mapping = clustering.getLookup().lookup(DendrogramData2.class);
+                        mapping = clustering.getLookup().lookup(DendrogramData.class);
                         res = mapping.getRowsResult();
                         break;
                     case "columns":
                         res = exec.hclustColumns(dataset, prop);
-                        mapping = new DendrogramData2(dataset, null, res);
+                        mapping = new DendrogramData(dataset, null, res);
                         break;
                     case "both":
                         mapping = exec.clusterAll(dataset, prop);
