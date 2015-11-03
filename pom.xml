@@ -86,7 +86,7 @@
         <dependency>
             <groupId>org.netbeans.api</groupId>
             <artifactId>org-netbeans-api-annotations-common</artifactId>
-            <version>RELEASE80</version>
+            <version>RELEASE802</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -111,7 +111,7 @@
         <dependency>
             <groupId>org.netbeans.api</groupId>
             <artifactId>org-openide-util</artifactId>
-            <version>RELEASE80</version>
+            <version>RELEASE802</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -183,7 +183,7 @@
         <dependency>
             <groupId>edu.umn</groupId>
             <artifactId>metis</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
     <properties>
