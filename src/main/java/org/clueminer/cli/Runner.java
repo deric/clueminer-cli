@@ -131,9 +131,9 @@ public class Runner implements Runnable {
 
     @Override
     public void run() {
-        Dataset<? extends Instance> dataset = null;
+        Dataset<Instance> dataset = null;
         try {
-            dataset = parseFile(params);
+            dataset = (Dataset<Instance>) parseFile(params);
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -172,61 +172,11 @@ public class Runner implements Runnable {
             prop.putInt(KMeans.K, dataset.getClasses().size());
         }
         time = new StopWatch(false);
-        Clustering clustering;
         for (int run = 0; run < params.repeat; run++) {
             if (algorithm instanceof AgglomerativeClustering) {
-                //hierarchical result
-                ClusteringExecutorCached exec = new ClusteringExecutorCached();
-                exec.setAlgorithm(algorithm);
-                HierarchicalResult res = null;
-                DendrogramMapping mapping = null;
-
-                if (!prop.containsKey(AgglParams.CUTOFF_STRATEGY)) {
-                    prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
-                }
-                logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
-                time.startMeasure();
-                switch (params.cluster) {
-                    case "rows":
-                        clustering = exec.clusterRows(dataset, prop);
-                        mapping = clustering.getLookup().lookup(DendrogramData.class);
-                        res = mapping.getRowsResult();
-                        break;
-                    case "columns":
-                        res = exec.hclustColumns(dataset, prop);
-                        mapping = new DendrogramData(dataset, null, res);
-                        break;
-                    case "both":
-                        mapping = exec.clusterAll(dataset, prop);
-                        res = mapping.getRowsResult();
-                        break;
-                }
-                time.endMeasure();
-                if (res != null) {
-                    if (params.matrix) {
-                        if (res.getProximityMatrix() != null) {
-                            res.getProximityMatrix().printLower(5, 2);
-                        }
-                    }
-                    if (params.tree) {
-                        res.getTreeData().print();
-                    }
-
-                    if (params.heatmap) {
-                        saveHeatmap(params, dataset, mapping);
-                    }
-                }
-                if (res != null) {
-                    clustering = res.getClustering();
-                    if (evals != null) {
-                        evaluate(clustering, evals, resultsFile(dataset.getName()));
-                    }
-                    if (run == 0 && params.scatter) {
-                        saveScatter(clustering, dataset.getName(), algorithm);
-                    }
-                }
+                prop = hierachical(dataset, prop, algorithm, evals, run);
             } else {
-                prop = flatPartitioning((Dataset<Instance>) dataset, prop, algorithm, evals, run);
+                prop = flatPartitioning(dataset, prop, algorithm, evals, run);
             }
             logger.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
         }
@@ -239,10 +189,85 @@ public class Runner implements Runnable {
         return clustering;
     }
 
+    private Props hierachical(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+        Clustering clustering;
+        //hierarchical result
+        ClusteringExecutorCached exec = new ClusteringExecutorCached();
+        exec.setAlgorithm(algorithm);
+        HierarchicalResult res = null;
+        DendrogramMapping mapping = null;
+
+        if (!prop.containsKey(AgglParams.CUTOFF_STRATEGY)) {
+            prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+        }
+        logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
+        time.startMeasure();
+        switch (params.cluster) {
+            case "rows":
+                clustering = exec.clusterRows(dataset, prop);
+                mapping = clustering.getLookup().lookup(DendrogramData.class);
+                res = mapping.getRowsResult();
+                break;
+            case "columns":
+                res = exec.hclustColumns(dataset, prop);
+                mapping = new DendrogramData(dataset, null, res);
+                break;
+            case "both":
+                mapping = exec.clusterAll(dataset, prop);
+                res = mapping.getRowsResult();
+                break;
+        }
+        time.endMeasure();
+        if (res != null) {
+            if (params.matrix) {
+                if (res.getProximityMatrix() != null) {
+                    res.getProximityMatrix().printLower(5, 2);
+                }
+            }
+            if (params.tree) {
+                res.getTreeData().print();
+            }
+
+            if (params.heatmap) {
+                saveHeatmap(params, dataset, mapping);
+            }
+        }
+        if (res != null) {
+            clustering = res.getClustering();
+            if (evals != null) {
+                evaluate(clustering, evals, resultsFile(dataset.getName()));
+            }
+            if (run == 0 && params.scatter) {
+                saveScatter(clustering, dataset.getName(), algorithm);
+            }
+        }
+        return prop;
+    }
+
     private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering = null;
+        //try to find optimal clustering
+        if (params.optimal) {
+            optFlatPartitioning(dataset, prop, algorithm, evals, run);
+        } else {
+            clustering = cluster(dataset, prop, algorithm);
+        }
+
+        if (clustering != null) {
+            evaluate(clustering, evals, resultsFile(dataset.getName()));
+            if (run == 0 && params.scatter) {
+                saveScatter(clustering, dataset.getName(), algorithm);
+            }
+            return clustering.getParams();
+        } else {
+            logger.log(Level.WARNING, "failed to find solution");
+        }
+        return prop;
+    }
+
+    private Clustering optFlatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+        Clustering clustering = null;
         Clustering curr;
-        //flat partitioning
         int cnt = 0;
         if (algorithm instanceof DBSCAN) {
             double bestEps = 0;
@@ -311,16 +336,8 @@ public class Runner implements Runnable {
         } else {
             clustering = cluster(dataset, prop, algorithm);
         }
-        if (clustering != null) {
-            evaluate(clustering, evals, resultsFile(dataset.getName()));
-            if (run == 0 && params.scatter) {
-                saveScatter(clustering, dataset.getName(), algorithm);
-            }
-            return clustering.getParams();
-        } else {
-            logger.log(Level.WARNING, "failed to find solution. evaluated {0} clusterings", new Object[]{cnt});
-        }
-        return prop;
+        logger.log(Level.INFO, "{0}: evaluated {1} clusterings", new Object[]{algorithm.getName(), cnt});
+        return clustering;
     }
 
     private File resultsFile(String fileName) {

@@ -78,4 +78,7 @@ public class Params {
     @Parameter(names = {"--experiment", "-exp"}, description = "experiment name, will use {base dir}/{experiment} (by default algorithm name)")
     public String experiment;
 
+    @Parameter(names = {"--optimal", "-opt"}, description = "try to find optimal configuration for the algorithm")
+    public boolean optimal = false;
+
 }
