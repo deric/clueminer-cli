@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import org.clueminer.chameleon.Chameleon;
 import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.algorithm.DBSCAN;
 import org.clueminer.clustering.algorithm.DBSCANParamEstim;
@@ -194,28 +195,18 @@ public class Runner implements Runnable {
         //hierarchical result
         ClusteringExecutorCached exec = new ClusteringExecutorCached();
         exec.setAlgorithm(algorithm);
-        HierarchicalResult res = null;
-        DendrogramMapping mapping = null;
+        HierarchicalResult res;
 
         if (!prop.containsKey(AgglParams.CUTOFF_STRATEGY)) {
             prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
         }
         logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
         time.startMeasure();
-        switch (params.cluster) {
-            case "rows":
-                clustering = exec.clusterRows(dataset, prop);
-                mapping = clustering.getLookup().lookup(DendrogramData.class);
-                res = mapping.getRowsResult();
-                break;
-            case "columns":
-                res = exec.hclustColumns(dataset, prop);
-                mapping = new DendrogramData(dataset, null, res);
-                break;
-            case "both":
-                mapping = exec.clusterAll(dataset, prop);
-                res = mapping.getRowsResult();
-                break;
+        if (params.optimal) {
+            res = optHierarchical(exec, dataset, prop, evals);
+            prop = res.getClustering().getParams();
+        } else {
+            res = stdHierarchical(exec, dataset, prop);
         }
         time.endMeasure();
         if (res != null) {
@@ -229,7 +220,7 @@ public class Runner implements Runnable {
             }
 
             if (params.heatmap) {
-                saveHeatmap(params, dataset, mapping);
+                saveHeatmap(params, dataset, res.getDendrogramMapping());
             }
         }
         if (res != null) {
@@ -242,6 +233,75 @@ public class Runner implements Runnable {
             }
         }
         return prop;
+    }
+
+    /**
+     * Basic hierarchical clustering
+     *
+     * @param exec
+     * @param dataset
+     * @param prop
+     * @return
+     */
+    private HierarchicalResult stdHierarchical(ClusteringExecutorCached exec, Dataset<Instance> dataset, Props prop) {
+        HierarchicalResult res = null;
+        DendrogramMapping mapping;
+        Clustering clustering;
+        switch (params.cluster) {
+            case "rows":
+                clustering = exec.clusterRows(dataset, prop);
+                mapping = clustering.getLookup().lookup(DendrogramData.class);
+                res = mapping.getRowsResult();
+                break;
+            case "columns":
+                res = exec.hclustColumns(dataset, prop);
+                //mapping = new DendrogramData(dataset, null, res);
+                break;
+            case "both":
+                mapping = exec.clusterAll(dataset, prop);
+                res = mapping.getRowsResult();
+                break;
+        }
+        return res;
+    }
+
+    private HierarchicalResult optHierarchical(ClusteringExecutorCached exec, Dataset<Instance> dataset, Props def, ClusterEvaluation[] evals) {
+        HierarchicalResult res;
+        HierarchicalResult bestRes = null;
+        Clustering clustering;
+
+        if (exec.getAlgorithm() instanceof Chameleon) {
+            //test several configurations and return best result
+            double maxScore = 0.0, score;
+            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
+            //auto pilot
+
+            String[] configs = new String[]{
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska}", //auto
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0}",
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,k:15}",
+                "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
+                "{cutoff-strategy:External_cutoff,noise_detection:1}", //noise detection
+            };
+            Props prop;
+            for (String config : configs) {
+                prop = def.copy();
+                prop.merge(Props.fromJson(config));
+                System.out.println("using prop: " + prop.toString());
+                res = stdHierarchical(exec, dataset, prop);
+                clustering = res.getClustering();
+                score = eval.score(clustering, prop);
+                if (eval.isBetter(score, maxScore)) {
+                    maxScore = score;
+                    bestRes = res;
+                }
+                evaluate(clustering, evals, resultsFile(dataset.getName()));
+            }
+            return bestRes;
+
+        } else {
+            return stdHierarchical(exec, dataset, def);
+        }
     }
 
     private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
@@ -274,7 +334,7 @@ public class Runner implements Runnable {
             int bestPts = 0;
             int maxSize = (int) Math.sqrt(dataset.size());
             double maxScore = 0.0, score;
-            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
+            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
 
             DBSCANParamEstim<Instance> dbscanParam = new DBSCANParamEstim();
             dbscanParam.estimate((Dataset<Instance>) dataset, prop);

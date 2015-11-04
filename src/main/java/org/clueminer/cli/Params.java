@@ -81,4 +81,7 @@ public class Params {
     @Parameter(names = {"--optimal", "-opt"}, description = "try to find optimal configuration for the algorithm")
     public boolean optimal = false;
 
+    @Parameter(names = {"--opt-eval", "-oe"}, description = "metric for choosing optimal clustring (internal or external)")
+    public String optEval = "NMI-sqrt";
+
 }
