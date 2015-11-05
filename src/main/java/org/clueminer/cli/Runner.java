@@ -278,10 +278,14 @@ public class Runner implements Runnable {
 
             String[] configs = new String[]{
                 "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska}", //auto
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0}",
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:3.0,interconnectivity_priority:1.0}",
                 "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0}",
                 "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,k:15}",
                 "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
-                "{cutoff-strategy:External_cutoff,noise_detection:1}", //noise detection
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,noise_detection:1}", //noise detection
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
+                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}"
             };
             Props prop;
             for (String config : configs) {
