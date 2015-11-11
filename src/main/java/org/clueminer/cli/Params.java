@@ -84,4 +84,7 @@ public class Params {
     @Parameter(names = {"--opt-eval", "-oe"}, description = "metric for choosing optimal clustring (internal or external)")
     public String optEval = "NMI-sqrt";
 
+    @Parameter(names = {"--method", "-mth"}, description = "a named method (with predefined configuration)")
+    public String method = "";
+
 }

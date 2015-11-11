@@ -266,46 +266,68 @@ public class Runner implements Runnable {
     }
 
     private HierarchicalResult optHierarchical(ClusteringExecutorCached exec, Dataset<Instance> dataset, Props def, ClusterEvaluation[] evals) {
-        HierarchicalResult res;
-        HierarchicalResult bestRes = null;
-        Clustering clustering;
-
         if (exec.getAlgorithm() instanceof Chameleon) {
             //test several configurations and return best result
-            double maxScore = 0.0, score;
-            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
-            //auto pilot
+            String[] configs;
+            switch (params.method) {
+                case "Ch1":
+                    String ch1 = "cutoff-strategy:External_cutoff,similarity_measure:Standard,partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
+                    configs = new String[]{
+                        "{" + ch1 + ",ctype=h12}",
+                        "{" + ch1 + ",ctype=fc1}",
+                        "{" + ch1 + ",ctype=fc2}",
+                        "{" + ch1 + ",ctype=gfc1}",
+                        "{" + ch1 + ",ctype=gfc2}",
+                        "{" + ch1 + ",ctype=h1}",
+                        "{" + ch1 + ",ctype=h2}",
+                        "{" + ch1 + ",ctype=edge1}",
+                        "{" + ch1 + ",ctype=edge2}",
+                        "{" + ch1 + ",ctype=gedge1}",
+                        "{" + ch1 + ",ctype=gedge2}"
+                    };
+                    return findBestHclust(configs, exec, dataset, def, evals);
+                default:
+                    //ch2
+                    configs = new String[]{
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska}", //auto
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:3.0,interconnectivity_priority:1.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,noise_detection:1}", //noise detection
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}"
+                    };
 
-            String[] configs = new String[]{
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska}", //auto
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0}",
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:3.0,interconnectivity_priority:1.0}",
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0}",
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,k:15}",
-                "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,noise_detection:1}", //noise detection
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
-                "{cutoff-strategy:External_cutoff,similarity_measure:Shatovska,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}"
-            };
-            Props prop;
-            for (String config : configs) {
-                prop = def.copy();
-                prop.merge(Props.fromJson(config));
-                System.out.println("using prop: " + prop.toString());
-                res = stdHierarchical(exec, dataset, prop);
-                clustering = res.getClustering();
-                score = eval.score(clustering, prop);
-                if (eval.isBetter(score, maxScore)) {
-                    maxScore = score;
-                    bestRes = res;
-                }
-                evaluate(clustering, evals, resultsFile(dataset.getName()));
+                    return findBestHclust(configs, exec, dataset, def, evals);
             }
-            return bestRes;
-
         } else {
             return stdHierarchical(exec, dataset, def);
         }
+    }
+
+    private HierarchicalResult findBestHclust(String[] configs, ClusteringExecutorCached exec, Dataset<Instance> dataset, Props def, ClusterEvaluation[] evals) {
+        double maxScore = 0.0, score;
+        Props prop;
+        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
+        Clustering clustering;
+        HierarchicalResult res;
+        HierarchicalResult bestRes = null;
+        for (String config : configs) {
+            prop = def.copy();
+            prop.merge(Props.fromJson(config));
+            System.out.println("using prop: " + prop.toString());
+            res = stdHierarchical(exec, dataset, prop);
+            clustering = res.getClustering();
+            score = eval.score(clustering, prop);
+            if (eval.isBetter(score, maxScore)) {
+                maxScore = score;
+                bestRes = res;
+            }
+            evaluate(clustering, evals, resultsFile(dataset.getName()));
+        }
+        return bestRes;
     }
 
     private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
