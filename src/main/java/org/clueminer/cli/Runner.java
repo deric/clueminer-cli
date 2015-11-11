@@ -403,24 +403,27 @@ public class Runner implements Runnable {
                     break;
                 default:
                     bestPts = 4; //fix minPts at 4
-                    prop.putInt(DBSCAN.MIN_PTS, bestPts);
                     eps = epsMax;
-                    while (eps > epsMin) {
-                        prop.putDouble(DBSCAN.EPS, eps);
-                        curr = cluster(dataset, prop, algorithm);
-                        score = eval.score(curr, prop);
-                        System.out.println("eps = " + eps + " minPts = " + bestPts + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
-                        if (eval.isBetter(score, maxScore)) {
-                            maxScore = score;
-                            clustering = curr;
-                            bestEps = eps;
+                    do {
+                        prop.putInt(DBSCAN.MIN_PTS, bestPts);
+                        while (eps > epsMin) {
+                            prop.putDouble(DBSCAN.EPS, eps);
+                            curr = cluster(dataset, prop, algorithm);
+                            score = eval.score(curr, prop);
+                            System.out.println("eps = " + eps + " minPts = " + bestPts + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
+                            if (eval.isBetter(score, maxScore)) {
+                                maxScore = score;
+                                clustering = curr;
+                                bestEps = eps;
+                            }
+                            cnt++;
+                            eps -= step; //eps increment
+                            if (curr.size() == 1 || curr.size() >= maxSize) {
+                                break;
+                            }
                         }
-                        cnt++;
-                        eps -= step; //eps increment
-                        if (curr.size() == 1 || curr.size() >= maxSize) {
-                            break;
-                        }
-                    }
+                        bestPts++;
+                    } while (bestEps == 0.0);
                     break;
             }
 
