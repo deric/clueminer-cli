@@ -376,27 +376,54 @@ public class Runner implements Runnable {
             System.out.println("min = " + epsMin + ", max = " + epsMax);
             //we have to guess parameters
             double eps;
-            for (int i = 4; i <= 10; i++) {
-                prop.putInt(DBSCAN.MIN_PTS, i);
-                eps = epsMax;
-                while (eps > epsMin) {
-                    prop.putDouble(DBSCAN.EPS, eps);
-                    curr = cluster(dataset, prop, algorithm);
-                    score = eval.score(curr, prop);
-                    System.out.println("eps = " + eps + " minPts = " + i + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
-                    if (eval.isBetter(score, maxScore)) {
-                        maxScore = score;
-                        clustering = curr;
-                        bestEps = eps;
-                        bestPts = i;
+            logger.log(Level.INFO, "using method: {0}", params.method);
+            switch (params.method) {
+                case "sp"://search parameters (a.k.a. super-powers)
+                    for (int i = 4; i <= 10; i++) {
+                        prop.putInt(DBSCAN.MIN_PTS, i);
+                        eps = epsMax;
+                        while (eps > epsMin) {
+                            prop.putDouble(DBSCAN.EPS, eps);
+                            curr = cluster(dataset, prop, algorithm);
+                            score = eval.score(curr, prop);
+                            System.out.println("eps = " + eps + " minPts = " + i + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
+                            if (eval.isBetter(score, maxScore)) {
+                                maxScore = score;
+                                clustering = curr;
+                                bestEps = eps;
+                                bestPts = i;
+                            }
+                            cnt++;
+                            eps -= step; //eps increment
+                            if (curr.size() == 1 || curr.size() >= maxSize) {
+                                break;
+                            }
+                        }
                     }
-                    cnt++;
-                    eps -= step; //eps increment
-                    if (curr.size() == 1 || curr.size() >= maxSize) {
-                        break;
+                    break;
+                default:
+                    bestPts = 4; //fix minPts at 4
+                    prop.putInt(DBSCAN.MIN_PTS, bestPts);
+                    eps = epsMax;
+                    while (eps > epsMin) {
+                        prop.putDouble(DBSCAN.EPS, eps);
+                        curr = cluster(dataset, prop, algorithm);
+                        score = eval.score(curr, prop);
+                        System.out.println("eps = " + eps + " minPts = " + bestPts + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
+                        if (eval.isBetter(score, maxScore)) {
+                            maxScore = score;
+                            clustering = curr;
+                            bestEps = eps;
+                        }
+                        cnt++;
+                        eps -= step; //eps increment
+                        if (curr.size() == 1 || curr.size() >= maxSize) {
+                            break;
+                        }
                     }
-                }
+                    break;
             }
+
             prop.putDouble(DBSCAN.EPS, bestEps);
             prop.putInt(DBSCAN.MIN_PTS, bestPts);
         } else if (algorithm instanceof CURE) {
