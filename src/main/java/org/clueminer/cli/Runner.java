@@ -309,10 +309,10 @@ public class Runner implements Runnable {
     }
 
     private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
-        Clustering clustering = null;
+        Clustering clustering;
         //try to find optimal clustering
         if (params.optimal) {
-            optFlatPartitioning(dataset, prop, algorithm, evals, run);
+            clustering = optFlatPartitioning(dataset, prop, algorithm, evals, run);
         } else {
             clustering = cluster(dataset, prop, algorithm);
         }
@@ -429,6 +429,7 @@ public class Runner implements Runnable {
         double score;
 
         //header
+        logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
         if (!results.exists()) {
             line = new String[evals.length + extraAttr];
             int i = 0;
@@ -439,7 +440,6 @@ public class Runner implements Runnable {
             }
             line[i++] = "Time (ms)";
             line[i++] = "Params";
-            logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
             writeCsvLine(results, line, false);
         }
 
