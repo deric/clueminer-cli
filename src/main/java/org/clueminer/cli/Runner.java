@@ -1,6 +1,7 @@
 package org.clueminer.cli;
 
 import au.com.bytecode.opencsv.CSVWriter;
+import edu.umn.cluto.Cluto;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -355,13 +356,12 @@ public class Runner implements Runnable {
         Clustering clustering = null;
         Clustering curr;
         int cnt = 0;
+        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
         if (algorithm instanceof DBSCAN) {
             double bestEps = 0;
             int bestPts = 0;
             int maxSize = (int) Math.sqrt(dataset.size());
             double maxScore = 0.0, score;
-            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
-
             DBSCANParamEstim<Instance> dbscanParam = new DBSCANParamEstim();
             dbscanParam.estimate((Dataset<Instance>) dataset, prop);
 
@@ -432,7 +432,6 @@ public class Runner implements Runnable {
         } else if (algorithm instanceof CURE) {
             //we don't have any heuristic for CURE yet
             double maxScore = 0.0, score;
-            ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider("NMI-sqrt");
             double shrink = 0.1;
             double bestShrink = 0;
             while (shrink < 1.0) {
@@ -449,6 +448,38 @@ public class Runner implements Runnable {
                 shrink += 0.1; //eps increment
             }
             prop.put(CURE.SHRINK_FACTOR, bestShrink);
+        } else if (algorithm instanceof Cluto) {
+            String[] configs = new String[]{
+                "{crfun=i1,agglofrom=15}",
+                "{crfun=i2}",
+                "{crfun=e1}",
+                "{crfun=g1}",
+                "{crfun=g1p}",
+                "{crfun=h1,agglofrom=20}",
+                "{crfun=h2}",
+                "{crfun=slink}",
+                "{crfun=wslink}",
+                "{crfun=clink}",
+                "{crfun=wclink}",
+                "{crfun=upgma}"
+            };
+            Props conf;
+            double maxScore = 0.0, score;
+            String bestConf = "";
+            for (String config : configs) {
+                conf = prop.copy();
+                conf.merge(Props.fromJson(config));
+                curr = cluster(dataset, conf, algorithm);
+                score = eval.score(curr, conf);
+                if (eval.isBetter(score, maxScore)) {
+                    maxScore = score;
+                    clustering = curr;
+                    bestConf = config;
+                }
+                cnt++;
+                evaluate(curr, evals, resultsFile(dataset.getName()));
+            }
+            logger.log(Level.INFO, "best configuration: {0}", bestConf);
         } else {
             clustering = cluster(dataset, prop, algorithm);
         }
