@@ -292,6 +292,7 @@ public class Runner implements Runnable {
                     configs = new String[]{
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK2}", //auto
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK2,closeness_priority:2.0,interconnectivity_priority:4.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK2,closeness_priority:2.0,interconnectivity_priority:3.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK2,closeness_priority:3.0,interconnectivity_priority:1.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK2,closeness_priority:1.0,interconnectivity_priority:2.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK2,closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
@@ -307,6 +308,7 @@ public class Runner implements Runnable {
                     configs = new String[]{
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1}", //auto
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:3.0,interconnectivity_priority:1.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:1.0,interconnectivity_priority:2.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
