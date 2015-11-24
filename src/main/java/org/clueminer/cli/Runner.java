@@ -298,7 +298,8 @@ public class Runner implements Runnable {
                         "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,noise_detection:1}", //noise detection
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}"
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1,k:10}"
                     };
 
                     return findBestHclust(configs, exec, dataset, def, evals);
@@ -315,7 +316,8 @@ public class Runner implements Runnable {
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,noise_detection:1}", //noise detection
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1}"
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1,k:10}"
                     };
 
                     return findBestHclust(configs, exec, dataset, def, evals);
