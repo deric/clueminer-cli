@@ -287,19 +287,39 @@ public class Runner implements Runnable {
                         "{" + ch1 + ",ctype=gedge2}"
                     };
                     return findBestHclust(configs, exec, dataset, def, evals);
+                case "Ch2s1":
+                case "Ch2s2":
                 case "Ch2s3":
+                case "Ch2s4":
+                case "Ch2s5":
+                    String sim;
+                    switch (params.method) {
+                        case "Ch2s2":
+                            sim = "BBK2";
+                            break;
+                        case "Ch2s3":
+                            sim = "BBK3";
+                            break;
+                        case "Ch2s4":
+                            sim = "BBK4";
+                            break;
+                        case "Ch2s5":
+                            sim = "BBK5";
+                            break;
+                        default:
+                            sim = "BBK1";
+                    }
                     //ch2
                     configs = new String[]{
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3}", //auto
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:2.0,interconnectivity_priority:4.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:3.0,interconnectivity_priority:1.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:1.0,interconnectivity_priority:2.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,noise_detection:1}", //noise detection
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK3,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1,k:10}"
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + "}", //auto
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:2.0,interconnectivity_priority:4.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:3.0,interconnectivity_priority:1.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:1.0,interconnectivity_priority:2.0}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",noise_detection:1}", //noise detection
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}",
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1,k:10}"
                     };
 
                     return findBestHclust(configs, exec, dataset, def, evals);
