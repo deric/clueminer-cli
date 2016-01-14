@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import org.clueminer.ap.AffinityPropagation;
 import org.clueminer.chameleon.Chameleon;
 import org.clueminer.clustering.ClusteringExecutorCached;
 import org.clueminer.clustering.algorithm.DBSCAN;
@@ -501,6 +502,31 @@ public class Runner implements Runnable {
                 "{crfun=clink}",
                 "{crfun=wclink}",
                 "{crfun=upgma}"
+            };
+            Props conf;
+            double maxScore = 0.0, score;
+            String bestConf = "";
+            for (String config : configs) {
+                conf = prop.copy();
+                conf.merge(Props.fromJson(config));
+                curr = cluster(dataset, conf, algorithm);
+                score = eval.score(curr, conf);
+                if (eval.isBetter(score, maxScore)) {
+                    maxScore = score;
+                    clustering = curr;
+                    bestConf = config;
+                }
+                cnt++;
+                evaluate(curr, evals, resultsFile(dataset.getName()));
+            }
+            logger.log(Level.INFO, "best configuration: {0}", bestConf);
+        } else if (algorithm instanceof AffinityPropagation) {
+            String[] configs = new String[]{
+                "{damping=0.5}",
+                "{damping=0.6}",
+                "{damping=0.7}",
+                "{damping=0.8}",
+                "{damping=0.9}"
             };
             Props conf;
             double maxScore = 0.0, score;
