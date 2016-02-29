@@ -521,12 +521,20 @@ public class Runner implements Runnable {
             }
             logger.log(Level.INFO, "best configuration: {0}", bestConf);
         } else if (algorithm instanceof AffinityPropagation) {
+            /**
+             * TODO: a heuristic to determine preference
+             */
             String[] configs = new String[]{
                 "{damping=0.5}",
+                "{damping=0.55}",
                 "{damping=0.6}",
+                "{damping=0.65}",
                 "{damping=0.7}",
+                "{damping=0.75}",
                 "{damping=0.8}",
-                "{damping=0.9}"
+                "{damping=0.85}",
+                "{damping=0.9}",
+                "{damping=0.95}"
             };
             Props conf;
             double maxScore = 0.0, score;
