@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 clueminer.org
+ * Copyright (C) 2011-2016 clueminer.org
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  */
 package org.clueminer.plot;
 
-import au.com.bytecode.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -24,12 +23,13 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.Clustering;
+import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
+import org.clueminer.dataset.api.StatsNum;
 import org.clueminer.gnuplot.GnuplotHelper;
 import org.clueminer.gnuplot.PointTypeIterator;
-import org.clueminer.stats.AttrNumStats;
 import org.clueminer.utils.DatasetWriter;
 import org.openide.util.Exceptions;
 
@@ -40,7 +40,6 @@ import org.openide.util.Exceptions;
  * @param <C>
  */
 public class GnuplotScatter<E extends Instance, C extends Cluster<E>> extends BasePlot {
-
 
     public GnuplotScatter(String folder) {
         super(folder);
@@ -99,11 +98,11 @@ public class GnuplotScatter<E extends Instance, C extends Cluster<E>> extends Ba
         int attrCnt = dataset.attributeCount();
         int labelPos = attrCnt + 1;
         //attributes are numbered from zero, gnuplot columns from 1
-        double max = dataset.getAttribute(x).statistics(AttrNumStats.MAX);
-        double min = dataset.getAttribute(x).statistics(AttrNumStats.MIN);
+        double max = dataset.getAttribute(x).statistics(StatsNum.MAX);
+        double min = dataset.getAttribute(x).statistics(StatsNum.MIN);
         String xrange = "[" + min + ":" + max + "]";
-        max = dataset.getAttribute(y).statistics(AttrNumStats.MAX);
-        min = dataset.getAttribute(y).statistics(AttrNumStats.MIN);
+        max = dataset.getAttribute(y).statistics(StatsNum.MAX);
+        min = dataset.getAttribute(y).statistics(StatsNum.MIN);
         String yrange = "[" + min + ":" + max + "]";
 
         String res = "set datafile separator \",\"\n"

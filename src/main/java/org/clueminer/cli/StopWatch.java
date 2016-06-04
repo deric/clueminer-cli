@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 clueminer.org
+ * Copyright (C) 2011-2016 clueminer.org
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ package org.clueminer.cli;
 import java.text.DecimalFormat;
 
 /**
+ * Simple measurement of execution time.
  *
  * @author deric
  */

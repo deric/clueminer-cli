@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 clueminer.org
+ * Copyright (C) 2011-2016 clueminer.org
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,11 +45,11 @@ public class BasePlot {
 
     /**
      *
-     * @param plots plot names without extension
-     * @param dir base dir
+     * @param plots      plot names without extension
+     * @param dir        base dir
      * @param gnuplotDir directory with gnuplot file
      * @param term
-     * @param ext extentions of output format
+     * @param ext        extentions of output format
      * @throws FileNotFoundException
      * @throws UnsupportedEncodingException
      * @throws IOException

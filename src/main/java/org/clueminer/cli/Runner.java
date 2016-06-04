@@ -1,6 +1,21 @@
+/*
+ * Copyright (C) 2011-2016 clueminer.org
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.clueminer.cli;
 
-import au.com.bytecode.opencsv.CSVWriter;
 import edu.umn.cluto.Cluto;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -20,8 +35,8 @@ import org.clueminer.clustering.algorithm.DBSCAN;
 import org.clueminer.clustering.algorithm.DBSCANParamEstim;
 import org.clueminer.clustering.algorithm.KMeans;
 import org.clueminer.clustering.algorithm.cure.CURE;
-import org.clueminer.clustering.api.AgglParams;
 import org.clueminer.clustering.api.AgglomerativeClustering;
+import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
@@ -31,11 +46,13 @@ import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
 import org.clueminer.clustering.api.factory.EvaluationFactory;
 import org.clueminer.clustering.struct.DendrogramData;
+import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
-import org.clueminer.dataset.plugin.ArrayDataset;
+import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
+import org.clueminer.exception.ParserError;
 import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.DataSniffer;
@@ -61,7 +78,7 @@ public class Runner implements Runnable {
         this.params = p;
     }
 
-    protected Dataset<? extends Instance> parseFile(Params p) throws IOException {
+    protected Dataset<? extends Instance> parseFile(Params p) throws IOException, ParserError {
         File f = new File(p.data);
         if (!f.exists() || !f.canRead()) {
             throw new InvalidArgumentException("can't read from file " + p.data);
@@ -137,7 +154,7 @@ public class Runner implements Runnable {
         Dataset<Instance> dataset = null;
         try {
             dataset = (Dataset<Instance>) parseFile(params);
-        } catch (IOException ex) {
+        } catch (IOException | ParserError ex) {
             Exceptions.printStackTrace(ex);
         }
         if (dataset == null || dataset.isEmpty()) {
@@ -199,8 +216,8 @@ public class Runner implements Runnable {
         exec.setAlgorithm(algorithm);
         HierarchicalResult res;
 
-        if (!prop.containsKey(AgglParams.CUTOFF_STRATEGY)) {
-            prop.put(AgglParams.CUTOFF_STRATEGY, params.cutoff);
+        if (!prop.containsKey(AlgParams.CUTOFF_STRATEGY)) {
+            prop.put(AlgParams.CUTOFF_STRATEGY, params.cutoff);
         }
         logger.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
         time.startMeasure();
