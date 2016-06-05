@@ -431,7 +431,7 @@ public class Runner implements Runnable {
             int bestPts = 0;
             int maxSize = (int) Math.sqrt(dataset.size());
             double maxScore = 0.0, score;
-            DBSCANParamEstim<Instance> dbscanParam = new DBSCANParamEstim();
+            DBSCANParamEstim<Instance> dbscanParam = DBSCANParamEstim.getInstance();
             dbscanParam.estimate((Dataset<Instance>) dataset, prop);
 
             //plot k-dist
