@@ -57,6 +57,7 @@ import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
+import org.clueminer.meta.engine.MetaSearch;
 import org.clueminer.plot.GnuplotLinePlot;
 import org.clueminer.plot.GnuplotScatter;
 import org.clueminer.utils.DataFileInfo;
@@ -167,6 +168,12 @@ public class Runner implements Runnable {
 
         logger.log(Level.INFO, "loaded dataset \"{2}\" with {0} instances, {1} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
+        if (params.metaSearch) {
+            MetaSearch metaSearch = new MetaSearch();
+            metaSearch.setDataset(dataset);
+            return;
+        }
+
         ClusteringAlgorithm algorithm = parseAlgorithm(params);
         for (Entry<Integer, Attribute> e : dataset.getAttributes().entrySet()) {
             System.out.println(e.getKey() + ": " + e.getValue());

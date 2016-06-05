@@ -103,4 +103,7 @@ public class Params {
     @Parameter(names = {"--method", "-mth"}, description = "a named method (with predefined configuration)")
     public String method = "";
 
+    @Parameter(names = {"--meta-search", "-mts"}, description = "tris to find optimal algorithm for given data")
+    public boolean metaSearch = false;
+
 }
