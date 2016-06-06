@@ -20,7 +20,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.util.logging.Level;
+import java.util.HashMap;
 import java.util.logging.Logger;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
@@ -28,9 +28,11 @@ import org.clueminer.clustering.api.Clustering;
 import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
+import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
 
 /**
+ * Write results into CSV files.
  *
  * @author deric
  * @param <E>
@@ -39,7 +41,7 @@ import org.openide.util.Exceptions;
 public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
 
     private static final Logger logger = Logger.getLogger(ResultsExporter.class.getName());
-    private Runner<E, C> runner;
+    private final Runner<E, C> runner;
 
     public ResultsExporter(Runner runner) {
         this.runner = runner;
@@ -50,10 +52,27 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
         return new File(path);
     }
 
+    public File createNewFile(Dataset<E> dataset, String suffix) {
+        File f = resultsFile(dataset.getName() + "-" + suffix);
+        if (f.exists()) {
+            f.delete();
+        }
+        return f;
+    }
+
+    public void evaluate(Clustering<E, C> clustering, ClusterEvaluation[] evals, Dataset<E> dataset, String suffix) {
+        evaluate(clustering, evals, resultsFile(dataset.getName() + "-" + suffix));
+    }
+
     public void evaluate(Clustering<E, C> clustering, ClusterEvaluation[] evals, Dataset<E> dataset) {
         evaluate(clustering, evals, resultsFile(dataset.getName()));
     }
 
+    public void writeMeta(HashMap<String, Double> meta, Dataset<E> dataset) {
+        File results = resultsFile(dataset.getName() + "-meta");
+        writeCsvLine(results, meta.keySet().toArray(new String[0]), false);
+        writeCsvLine(results, meta.values().toArray(new Double[0]), true);
+    }
 
     /**
      * Evaluate
@@ -63,10 +82,14 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
      * @param results
      */
     public void evaluate(Clustering<E, C> clustering, ClusterEvaluation[] evals, File results) {
+        if (clustering == null) {
+            System.err.println("ERROR: missing clustering: " + clustering);
+            return;
+        }
         if (evals == null) {
             return;
         }
-        Dataset<? extends Instance> dataset = clustering.getLookup().lookup(Dataset.class);
+        Dataset<E> dataset = clustering.getLookup().lookup(Dataset.class);
         if (dataset == null) {
             throw new RuntimeException("dataset not in clustering lookup!");
         }
@@ -75,7 +98,7 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
         double score;
 
         //header
-        logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
+        //logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
         if (!results.exists()) {
             line = new String[evals.length + extraAttr];
             int i = 0;
@@ -93,14 +116,32 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
         int i = 0;
         line[i++] = dataset.getName();
         line[i++] = String.valueOf(clustering.size());
-        for (ClusterEvaluation e : evals) {
-            score = e.score(clustering);
-            line[i++] = String.valueOf(score);
-            System.out.println(e.getName() + ": " + score);
+        try {
+            for (ClusterEvaluation e : evals) {
+                score = e.score(clustering);
+                line[i++] = String.valueOf(score);
+                //System.out.println(e.getName() + ": " + score);
+            }
+        } catch (Exception e) {
+            System.out.println("clustering " + clustering.getParams().toJson());
+            Exceptions.printStackTrace(e);
         }
-        line[i++] = runner.getTimer().formatMs();
+        StopWatch time = clustering.getLookup().lookup(StopWatch.class);
+        if (time != null) {
+            line[i++] = time.formatMs();
+        } else {
+            line[i++] = "";
+        }
         line[i++] = clustering.getParams().toJson();
         writeCsvLine(results, line, true);
+    }
+
+    public void writeCsvLine(File file, Double[] columns, boolean apend) {
+        String[] cols = new String[columns.length];
+        for (int i = 0; i < cols.length; i++) {
+            cols[i] = String.valueOf(columns[i]);
+        }
+        writeCsvLine(file, cols, apend);
     }
 
     public void writeCsvLine(File file, String[] columns, boolean apend) {

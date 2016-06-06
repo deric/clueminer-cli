@@ -47,6 +47,8 @@ import org.clueminer.clustering.api.ClusteringFactory;
 import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
 import org.clueminer.clustering.api.factory.EvaluationFactory;
+import org.clueminer.clustering.api.factory.ExternalEvaluatorFactory;
+import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
 import org.clueminer.clustering.struct.DendrogramData;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
@@ -66,6 +68,7 @@ import org.clueminer.plot.GnuplotScatter;
 import org.clueminer.utils.DataFileInfo;
 import org.clueminer.utils.DatasetSniffer;
 import org.clueminer.utils.Props;
+import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
 
 /**
@@ -79,7 +82,7 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
     private static final Logger logger = Logger.getLogger(Runner.class.getName());
     private final Params params;
     private StopWatch time;
-    private ResultsExporter export;
+    private final ResultsExporter export;
 
     Runner(Params p) {
         this.params = p;
@@ -176,7 +179,9 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
         logger.log(Level.INFO, "loaded dataset \"{2}\" with {0} instances, {1} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
         if (params.metaSearch) {
-            params.experiment = "meta-search";
+            if (params.experiment == null) {
+                params.experiment = "meta-search";
+            }
             ExecutorService pool = Executors.newFixedThreadPool(1);
             MetaSearch<E, C> metaSearch = new MetaSearch<>();
             metaSearch.setDataset(dataset);
@@ -184,12 +189,28 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
             Future<ParetoFrontQueue> future = pool.submit(callable);
 
             try {
-                ParetoFrontQueue q = future.get();
+                ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
                 q.printRanking(new NMIsum());
+
+                //internal evaluation
+                InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
+                File res = export.createNewFile(dataset, "internal");
+                ClusterEvaluation[] evals = ief.getAllArray();
+                for (Clustering<E, C> clust : q) {
+                    export.evaluate(clust, evals, res);
+                }
+
+                ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
+                res = export.createNewFile(dataset, "external");
+                evals = eef.getAllArray();
+                for (Clustering<E, C> clust : q) {
+                    export.evaluate(clust, evals, res);
+                }
 
             } catch (InterruptedException | ExecutionException ex) {
                 Exceptions.printStackTrace(ex);
             }
+            export.writeMeta(metaSearch.getMeta(), dataset);
             pool.shutdown();
             //System.exit(0);
             return;
@@ -234,6 +255,7 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
         time.startMeasure();
         Clustering clustering = algorithm.cluster(dataset, prop);
         time.endMeasure();
+        clustering.lookupAdd(time);
         return clustering;
     }
 
