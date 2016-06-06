@@ -19,12 +19,14 @@ package org.clueminer.cli;
 import edu.umn.cluto.Cluto;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -46,18 +48,19 @@ import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
 import org.clueminer.clustering.api.factory.EvaluationFactory;
 import org.clueminer.clustering.struct.DendrogramData;
-import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
+import org.clueminer.eval.external.NMIsum;
 import org.clueminer.exception.ParserError;
 import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
 import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
 import org.clueminer.meta.engine.MetaSearch;
+import org.clueminer.meta.ranking.ParetoFrontQueue;
 import org.clueminer.plot.GnuplotLinePlot;
 import org.clueminer.plot.GnuplotScatter;
 import org.clueminer.utils.DataFileInfo;
@@ -68,24 +71,28 @@ import org.openide.util.Exceptions;
 /**
  *
  * @author Tomas Barton
+ * @param <E>
+ * @param <C>
  */
-public class Runner implements Runnable {
+public class Runner<E extends Instance, C extends Cluster<E>> implements Runnable {
 
     private static final Logger logger = Logger.getLogger(Runner.class.getName());
     private final Params params;
     private StopWatch time;
+    private ResultsExporter export;
 
     Runner(Params p) {
         this.params = p;
+        this.export = new ResultsExporter(this);
     }
 
-    protected Dataset<? extends Instance> parseFile(Params p) throws IOException, ParserError {
+    protected Dataset<E> parseFile(Params p) throws IOException, ParserError {
         File f = new File(p.data);
         if (!f.exists() || !f.canRead()) {
             throw new InvalidArgumentException("can't read from file " + p.data);
         }
 
-        Dataset<? extends Instance> dataset;
+        Dataset<E> dataset;
         int clsIndex = p.clsIndex;
         ArrayList<Integer> skip = new ArrayList<>(1);
 
@@ -152,9 +159,9 @@ public class Runner implements Runnable {
 
     @Override
     public void run() {
-        Dataset<Instance> dataset = null;
+        Dataset<E> dataset = null;
         try {
-            dataset = (Dataset<Instance>) parseFile(params);
+            dataset = (Dataset<E>) parseFile(params);
         } catch (IOException | ParserError ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -169,8 +176,22 @@ public class Runner implements Runnable {
         logger.log(Level.INFO, "loaded dataset \"{2}\" with {0} instances, {1} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
         if (params.metaSearch) {
-            MetaSearch metaSearch = new MetaSearch();
+            params.experiment = "meta-search";
+            ExecutorService pool = Executors.newFixedThreadPool(1);
+            MetaSearch<E, C> metaSearch = new MetaSearch<>();
             metaSearch.setDataset(dataset);
+            Callable<ParetoFrontQueue> callable = metaSearch;
+            Future<ParetoFrontQueue> future = pool.submit(callable);
+
+            try {
+                ParetoFrontQueue q = future.get();
+                q.printRanking(new NMIsum());
+
+            } catch (InterruptedException | ExecutionException ex) {
+                Exceptions.printStackTrace(ex);
+            }
+            pool.shutdown();
+            //System.exit(0);
             return;
         }
 
@@ -216,7 +237,7 @@ public class Runner implements Runnable {
         return clustering;
     }
 
-    private Props hierachical(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+    private Props hierachical(Dataset<E> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering;
         //hierarchical result
         ClusteringExecutorCached exec = new ClusteringExecutorCached();
@@ -252,7 +273,7 @@ public class Runner implements Runnable {
         if (res != null) {
             clustering = res.getClustering();
             if (evals != null) {
-                evaluate(clustering, evals, resultsFile(dataset.getName()));
+                export.evaluate(clustering, evals, dataset);
             }
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
@@ -269,7 +290,7 @@ public class Runner implements Runnable {
      * @param prop
      * @return
      */
-    private HierarchicalResult stdHierarchical(ClusteringExecutorCached exec, Dataset<Instance> dataset, Props prop) {
+    private HierarchicalResult stdHierarchical(ClusteringExecutorCached exec, Dataset<E> dataset, Props prop) {
         HierarchicalResult res = null;
         DendrogramMapping mapping;
         Clustering clustering;
@@ -291,7 +312,7 @@ public class Runner implements Runnable {
         return res;
     }
 
-    private HierarchicalResult optHierarchical(ClusteringExecutorCached exec, Dataset<Instance> dataset, Props def, ClusterEvaluation[] evals) {
+    private HierarchicalResult optHierarchical(ClusteringExecutorCached exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
         if (exec.getAlgorithm() instanceof Chameleon) {
             //test several configurations and return best result
             String[] configs;
@@ -384,7 +405,7 @@ public class Runner implements Runnable {
         }
     }
 
-    private HierarchicalResult findBestHclust(String[] configs, ClusteringExecutorCached exec, Dataset<Instance> dataset, Props def, ClusterEvaluation[] evals) {
+    private HierarchicalResult findBestHclust(String[] configs, ClusteringExecutorCached exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
         double maxScore = 0.0, score;
         Props prop;
         ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
@@ -402,12 +423,12 @@ public class Runner implements Runnable {
                 maxScore = score;
                 bestRes = res;
             }
-            evaluate(clustering, evals, resultsFile(dataset.getName()));
+            export.evaluate(clustering, evals, dataset);
         }
         return bestRes;
     }
 
-    private Props flatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+    private Props flatPartitioning(Dataset<E> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering;
         //try to find optimal clustering
         if (params.optimal) {
@@ -417,7 +438,7 @@ public class Runner implements Runnable {
         }
 
         if (clustering != null) {
-            evaluate(clustering, evals, resultsFile(dataset.getName()));
+            export.evaluate(clustering, evals, dataset);
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
@@ -428,7 +449,7 @@ public class Runner implements Runnable {
         return prop;
     }
 
-    private Clustering optFlatPartitioning(Dataset<Instance> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+    private Clustering optFlatPartitioning(Dataset<E> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering = null;
         Clustering curr;
         int cnt = 0;
@@ -438,11 +459,11 @@ public class Runner implements Runnable {
             int bestPts = 0;
             int maxSize = (int) Math.sqrt(dataset.size());
             double maxScore = 0.0, score;
-            DBSCANParamEstim<Instance> dbscanParam = DBSCANParamEstim.getInstance();
-            dbscanParam.estimate((Dataset<Instance>) dataset, prop);
+            DBSCANParamEstim<E> dbscanParam = DBSCANParamEstim.getInstance();
+            dbscanParam.estimate((Dataset<E>) dataset, prop);
 
             //plot k-dist
-            GnuplotLinePlot<Instance, Cluster<Instance>> chart = new GnuplotLinePlot<>(workDir() + File.separatorChar + dataset.getName());
+            GnuplotLinePlot<E, C> chart = new GnuplotLinePlot<>(workDir() + File.separatorChar + dataset.getName());
             chart.plot(dbscanParam, dataset, "4-dist plot " + dataset.getName());
 
             double epsMax = dbscanParam.getMaxEps();
@@ -553,7 +574,7 @@ public class Runner implements Runnable {
                     bestConf = config;
                 }
                 cnt++;
-                evaluate(curr, evals, resultsFile(dataset.getName()));
+                export.evaluate(curr, evals, dataset);
             }
             logger.log(Level.INFO, "best configuration: {0}", bestConf);
         } else if (algorithm instanceof AffinityPropagation) {
@@ -586,7 +607,7 @@ public class Runner implements Runnable {
                     bestConf = config;
                 }
                 cnt++;
-                evaluate(curr, evals, resultsFile(dataset.getName()));
+                export.evaluate(curr, evals, dataset);
             }
             logger.log(Level.INFO, "best configuration: {0}", bestConf);
         } else {
@@ -596,71 +617,8 @@ public class Runner implements Runnable {
         return clustering;
     }
 
-    private File resultsFile(String fileName) {
-        String path = workDir() + File.separatorChar + fileName + ".csv";
-        return new File(path);
-    }
-
-    /**
-     * Evaluate
-     *
-     * @param clustering
-     * @param evals
-     * @param results
-     */
-    private void evaluate(Clustering clustering, ClusterEvaluation[] evals, File results) {
-        if (evals == null) {
-            return;
-        }
-        Dataset<? extends Instance> dataset = clustering.getLookup().lookup(Dataset.class);
-        if (dataset == null) {
-            throw new RuntimeException("dataset not in clustering lookup!");
-        }
-        String[] line;
-        int extraAttr = 4;
-        double score;
-
-        //header
-        logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
-        if (!results.exists()) {
-            line = new String[evals.length + extraAttr];
-            int i = 0;
-            line[i++] = "dataset";
-            line[i++] = "clusters";
-            for (ClusterEvaluation e : evals) {
-                line[i++] = e.getName();
-            }
-            line[i++] = "Time (ms)";
-            line[i++] = "Params";
-            writeCsvLine(results, line, false);
-        }
-
-        line = new String[evals.length + extraAttr];
-        int i = 0;
-        line[i++] = dataset.getName();
-        line[i++] = String.valueOf(clustering.size());
-        for (ClusterEvaluation e : evals) {
-            score = e.score(clustering);
-            line[i++] = String.valueOf(score);
-            System.out.println(e.getName() + ": " + score);
-        }
-        line[i++] = time.formatMs();
-        line[i++] = clustering.getParams().toJson();
-        writeCsvLine(results, line, true);
-    }
-
-    public void writeCsvLine(File file, String[] columns, boolean apend) {
-        try (PrintWriter writer = new PrintWriter(
-                new FileOutputStream(file, apend)
-        )) {
-
-            CSVWriter csv = new CSVWriter(writer, params.separator.charAt(0));
-            csv.writeNext(columns, false);
-            writer.close();
-
-        } catch (FileNotFoundException ex) {
-            Exceptions.printStackTrace(ex);
-        }
+    public StopWatch getTimer() {
+        return time;
     }
 
     private ClusterEvaluation[] loadEvaluation(String metrics) {
@@ -717,6 +675,10 @@ public class Runner implements Runnable {
             String title = algorithm.getName() + " - " + clustering.getParams().toString();
             scatter.plot(clustering, title);
         }
+    }
+
+    public Params getParams() {
+        return params;
     }
 
 }

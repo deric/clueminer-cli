@@ -52,7 +52,7 @@ public class Params {
     @Parameter(names = "--header", description = "if there is a header with attribute name", required = false)
     public boolean header = true;
 
-    @Parameter(names = {"--algorithm", "-a"}, description = "name of the algorithm", required = true)
+    @Parameter(names = {"--algorithm", "-a"}, description = "name of the algorithm", required = false)
     public String algorithm;
 
     @Parameter(names = {"--alg-params", "-p"}, description = "parameters of the algorithm", required = false)
