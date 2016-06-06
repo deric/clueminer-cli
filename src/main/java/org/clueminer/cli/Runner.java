@@ -21,6 +21,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -180,7 +181,7 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
         if (params.metaSearch) {
             if (params.experiment == null) {
-                params.experiment = "meta-search";
+                params.experiment = "meta-search" + File.separatorChar + safeName(dataset.getName());
             }
             ExecutorService pool = Executors.newFixedThreadPool(1);
             MetaSearch<E, C> metaSearch = new MetaSearch<>();
@@ -191,22 +192,19 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
             try {
                 ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
                 q.printRanking(new NMIsum());
-
+                HashMap<Double, Clustering<E, C>> ranking = q.computeRanking();
                 //internal evaluation
                 InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
                 File res = export.createNewFile(dataset, "internal");
                 ClusterEvaluation[] evals = ief.getAllArray();
-                for (Clustering<E, C> clust : q) {
-                    export.evaluate(clust, evals, res);
-                }
+                export.ranking(ranking, evals, res);
 
                 ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
                 res = export.createNewFile(dataset, "external");
                 evals = eef.getAllArray();
-                for (Clustering<E, C> clust : q) {
-                    export.evaluate(clust, evals, res);
-                }
+                export.ranking(ranking, evals, res);
 
+                System.out.println("best template: " + q.poll().getParams().toJson());
             } catch (InterruptedException | ExecutionException ex) {
                 Exceptions.printStackTrace(ex);
             }
