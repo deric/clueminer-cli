@@ -56,7 +56,6 @@ import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
-import org.clueminer.eval.external.NMIsum;
 import org.clueminer.exception.ParserError;
 import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
@@ -182,6 +181,8 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
         if (params.metaSearch) {
             if (params.experiment == null) {
                 params.experiment = "meta-search" + File.separatorChar + safeName(dataset.getName());
+            } else {
+                params.experiment = params.experiment + File.separatorChar + safeName(dataset.getName());
             }
             ExecutorService pool = Executors.newFixedThreadPool(1);
             MetaSearch<E, C> metaSearch = new MetaSearch<>();
@@ -191,7 +192,6 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
 
             try {
                 ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
-                q.printRanking(new NMIsum());
                 HashMap<Double, Clustering<E, C>> ranking = q.computeRanking();
                 //internal evaluation
                 InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();

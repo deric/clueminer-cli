@@ -23,6 +23,7 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
+import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
@@ -41,7 +42,7 @@ import org.openide.util.Exceptions;
  */
 public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
 
-    private static final Logger logger = Logger.getLogger(ResultsExporter.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ResultsExporter.class.getName());
     private final Runner<E, C> runner;
 
     public ResultsExporter(Runner runner) {
@@ -99,6 +100,7 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
             meta.put("dataset", dataset.getName());
             meta.put("clusters", String.valueOf(clustering.size()));
             meta.put("rank", String.valueOf(e.getKey()));
+            meta.put("algorithm", clustering.getParams().get(AlgParams.ALG));
 
             evaluate(clustering, evals, results, meta);
         }
