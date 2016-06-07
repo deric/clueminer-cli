@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
@@ -44,9 +45,12 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
 
     private static final Logger LOGGER = Logger.getLogger(ResultsExporter.class.getName());
     private final Runner<E, C> runner;
+    private final DecimalFormat df;
 
     public ResultsExporter(Runner runner) {
         this.runner = runner;
+        df = new DecimalFormat();
+        df.setGroupingUsed(false);
     }
 
     public File resultsFile(String fileName) {
@@ -83,7 +87,7 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
         i = 0;
         row[i] = dataset.getName();
         for (double d : meta.values()) {
-            row[++i] = String.valueOf(d);
+            row[++i] = df.format(d);
         }
         writeCsvLine(results, row, true);
     }
@@ -99,7 +103,7 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
 
             meta.put("dataset", dataset.getName());
             meta.put("clusters", String.valueOf(clustering.size()));
-            meta.put("rank", String.valueOf(e.getKey()));
+            meta.put("rank", df.format(e.getKey()));
             meta.put("algorithm", clustering.getParams().get(AlgParams.ALG));
 
             evaluate(clustering, evals, results, meta);
@@ -143,7 +147,7 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
         }
         StopWatch time = clustering.getLookup().lookup(StopWatch.class);
         if (time != null) {
-            line[i++] = time.formatMs();
+            line[i++] = df.format(time.timeInMs());
         } else {
             line[i++] = "";
         }
@@ -207,7 +211,7 @@ public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
         line[i++] = String.valueOf(clustering.size());
         StopWatch time = clustering.getLookup().lookup(StopWatch.class);
         if (time != null) {
-            line[i++] = time.formatMs();
+            line[i++] = df.format(time.timeInMs());
         } else {
             line[i++] = "";
         }
