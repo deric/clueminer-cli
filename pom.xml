@@ -16,7 +16,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>nbm-maven-plugin</artifactId>
-                <version>3.13</version>
                 <extensions>true</extensions>
                 <configuration>
                     <publicPackages>
@@ -201,6 +200,11 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>meta-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>evolution-api</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

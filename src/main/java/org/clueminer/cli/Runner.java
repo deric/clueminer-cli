@@ -56,6 +56,7 @@ import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
+import org.clueminer.evolution.api.Individual;
 import org.clueminer.exception.ParserError;
 import org.clueminer.io.ARFFHandler;
 import org.clueminer.io.CsvLoader;
@@ -77,7 +78,7 @@ import org.openide.util.Exceptions;
  * @param <E>
  * @param <C>
  */
-public class Runner<E extends Instance, C extends Cluster<E>> implements Runnable {
+public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> implements Runnable {
 
     private static final Logger logger = Logger.getLogger(Runner.class.getName());
     private final Params params;
@@ -185,7 +186,7 @@ public class Runner<E extends Instance, C extends Cluster<E>> implements Runnabl
                 params.experiment = params.experiment + File.separatorChar + safeName(dataset.getName());
             }
             ExecutorService pool = Executors.newFixedThreadPool(1);
-            MetaSearch<E, C> metaSearch = new MetaSearch<>();
+            MetaSearch<I, E, C> metaSearch = new MetaSearch<>();
             metaSearch.setDataset(dataset);
             Callable<ParetoFrontQueue> callable = metaSearch;
             Future<ParetoFrontQueue> future = pool.submit(callable);

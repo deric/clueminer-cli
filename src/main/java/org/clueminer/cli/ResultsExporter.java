@@ -31,6 +31,7 @@ import org.clueminer.clustering.api.Clustering;
 import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
+import org.clueminer.evolution.api.Individual;
 import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
 
@@ -41,10 +42,10 @@ import org.openide.util.Exceptions;
  * @param <E>
  * @param <C>
  */
-public class ResultsExporter<E extends Instance, C extends Cluster<E>> {
+public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> {
 
     private static final Logger LOGGER = Logger.getLogger(ResultsExporter.class.getName());
-    private final Runner<E, C> runner;
+    private final Runner<I, E, C> runner;
     private final DecimalFormat df;
 
     public ResultsExporter(Runner runner) {
