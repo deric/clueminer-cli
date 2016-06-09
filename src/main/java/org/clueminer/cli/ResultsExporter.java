@@ -23,6 +23,7 @@ import java.io.PrintWriter;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.SortedMap;
 import java.util.logging.Logger;
 import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
@@ -39,6 +40,7 @@ import org.openide.util.Exceptions;
  * Write results into CSV files.
  *
  * @author deric
+ * @param <I>
  * @param <E>
  * @param <C>
  */
@@ -93,7 +95,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         writeCsvLine(results, row, true);
     }
 
-    public void ranking(HashMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results) {
+    public void ranking(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results) {
         HashMap<String, String> meta = new HashMap<>();
         for (Entry<Double, Clustering<E, C>> e : ranking.entrySet()) {
             Clustering<E, C> clustering = e.getValue();
@@ -253,6 +255,52 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         } catch (FileNotFoundException ex) {
             Exceptions.printStackTrace(ex);
         }
+    }
+
+    public void writeCsvLine(File file, StringBuilder line, boolean apend) {
+        try (PrintWriter writer = new PrintWriter(
+                new FileOutputStream(file, apend)
+        )) {
+
+            CSVWriter csv = new CSVWriter(writer, runner.getParams().separator.charAt(0));
+            csv.writeLine(line);
+            writer.close();
+        } catch (FileNotFoundException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+    }
+
+    public void exportFront(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results) {
+        String sep = ",";
+        double rank;
+        String alg;
+        Clustering<E, C> c;
+        StringBuilder sb = new StringBuilder();
+        sb.append("rank").append(sep);
+        sb.append("algorithm").append(sep);
+        for (ClusterEvaluation eval : evals) {
+            sb.append(eval.getName()).append(sep);
+        }
+        sb.append("clusters");
+        //write header (overwrite previous result)
+        writeCsvLine(results, sb, false);
+        for (Entry<Double, Clustering<E, C>> e : ranking.entrySet()) {
+            sb = new StringBuilder();
+            rank = e.getKey();
+            c = e.getValue();
+            alg = c.getParams().get(AlgParams.ALG);
+            sb.append(format(rank)).append(" - ").append(alg).append("[").append(c.size()).append("]").append(sep)
+                    .append(alg).append(sep);
+            for (ClusterEvaluation eval : evals) {
+                sb.append(format(eval.score(c))).append(sep);
+            }
+            sb.append(c.size());
+            writeCsvLine(results, sb, true);
+        }
+    }
+
+    private String format(double val) {
+        return String.format("%.2f", val);
     }
 
 }

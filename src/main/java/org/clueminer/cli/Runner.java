@@ -21,8 +21,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -75,6 +75,7 @@ import org.openide.util.Exceptions;
 /**
  *
  * @author Tomas Barton
+ * @param <I> individual represents mutable solution
  * @param <E>
  * @param <C>
  */
@@ -177,6 +178,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             throw new RuntimeException("missing dataset name");
         }
 
+        ClusterEvaluation[] evals = loadEvaluation(params.eval);
+
         logger.log(Level.INFO, "loaded dataset \"{2}\" with {0} instances, {1} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
         if (params.metaSearch) {
@@ -193,11 +196,15 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
             try {
                 ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
-                HashMap<Double, Clustering<E, C>> ranking = q.computeRanking();
+                SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
+                if (evals != null) {
+                    export.exportFront(ranking, evals, export.resultsFile("pareto-front"));
+                }
+
                 //internal evaluation
                 InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
                 File res = export.createNewFile(dataset, "internal");
-                ClusterEvaluation[] evals = ief.getAllArray();
+                evals = ief.getAllArray();
                 export.ranking(ranking, evals, res);
 
                 ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
@@ -226,8 +233,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         if (params.experiment == null) {
             params.experiment = safeName(params.algorithm);
         }
-
-        ClusterEvaluation[] evals = loadEvaluation(params.eval);
 
         Props prop;
         if (params.algParams != null) {
