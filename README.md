@@ -20,6 +20,10 @@ run k-means clustering on a ARFF dataset (`k` will be used according to number o
 ```
 ./run -d ~/_bench/artificial/aggregation.arff -t arff -a k-means -e "AIC,NMI-sqrt" --hint-k
 ```
+meta-search on a dataset:
+```
+./run -mts -d ~/_bench/real-world/iris.arff -e 'Ratkowsky-Lance,PointBiserial-Norm,NMI-sqrt'
+```
 
   - to build single all containing JAR:
 ```
