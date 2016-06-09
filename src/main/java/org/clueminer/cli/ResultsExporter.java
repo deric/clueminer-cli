@@ -281,6 +281,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         for (ClusterEvaluation eval : evals) {
             sb.append(eval.getName()).append(sep);
         }
+        sb.append("front").append(sb);
         sb.append("clusters");
         //write header (overwrite previous result)
         writeCsvLine(results, sb, false);
@@ -294,6 +295,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             for (ClusterEvaluation eval : evals) {
                 sb.append(format(eval.score(c))).append(sep);
             }
+            sb.append(String.format("%.0f", rank)).append(sep);
             sb.append(c.size());
             writeCsvLine(results, sb, true);
         }
