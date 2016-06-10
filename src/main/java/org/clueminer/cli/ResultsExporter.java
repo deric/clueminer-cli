@@ -32,6 +32,7 @@ import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
+import org.clueminer.clustering.api.EvaluationTable;
 import org.clueminer.clustering.api.Rank;
 import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
@@ -142,20 +143,20 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             i++;
         }
         Arrays.sort(ref, comp);
-        System.out.println("Reference:");
-        for (int j = 0; j < ref.length; j++) {
-            System.out.println(j + ": " + comp.evaluationTable(ref[j]).getScore(supervised) + ", ID: " + ref[j].getId());;
-            //Clustering clustering = ref[j];
-        }
-        System.out.println("MO!");
-        for (Entry<Double, Clustering<E, C>> e : ranking.entrySet()) {
-            System.out.println(e.getKey() + ": " + comp.evaluationTable(e.getValue()).getScore(supervised));
-            //Clustering clustering = ref[j];
-        }
+        /* System.out.println("Reference:");
+         * for (int j = 0; j < ref.length; j++) {
+         * System.out.println(j + ": " + comp.evaluationTable(ref[j]).getScore(supervised) + ", ID: " + ref[j].getId());;
+         * //Clustering clustering = ref[j];
+         * }
+         * System.out.println("MO!");
+         * for (Entry<Double, Clustering<E, C>> e : ranking.entrySet()) {
+         * System.out.println(e.getKey() + ": " + comp.evaluationTable(e.getValue()).getScore(supervised));
+         * //Clustering clustering = ref[j];
+         * } */
         double corr = rankCmp.correlation(mo, ref, map);
         StringBuilder sb = new StringBuilder();
         for (ClusterEvaluation ev : q.getObjectives()) {
-            sb.append(ev.getName()).append("&");
+            sb.append(ev.getName()).append(" & ");
         }
         sb.append(q.getSortingObjectives().getName());
         System.out.println(sb.toString() + ": " + corr);
@@ -216,9 +217,11 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             line[i++] = "";
         }
         System.out.print("Evaluating scores " + clustering.fingerprint());
+        ClusteringComparator comp = new ClusteringComparator();
+        EvaluationTable et = comp.evaluationTable(clustering);
         try {
             for (ClusterEvaluation e : evals) {
-                score = e.score(clustering);
+                score = et.getScore(e);
                 line[i++] = String.valueOf(score);
                 System.out.print(".");
                 //System.out.println(e.getName() + ": " + score);
@@ -280,9 +283,11 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             line[i++] = "";
         }
         System.out.print("Evaluating scores " + clustering.fingerprint());
+        ClusteringComparator comp = new ClusteringComparator();
+        EvaluationTable et = comp.evaluationTable(clustering);
         try {
             for (ClusterEvaluation e : evals) {
-                score = e.score(clustering);
+                score = et.getScore(e);
                 line[i++] = String.valueOf(score);
                 System.out.print(".");
                 //System.out.println(e.getName() + ": " + score);
@@ -360,8 +365,10 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             alg = c.getParams().get(AlgParams.ALG);
             sb.append(format(rank)).append(" - ").append(alg).append("[").append(c.size()).append("]").append(sep)
                     .append(alg).append(sep);
+            ClusteringComparator comp = new ClusteringComparator();
+            EvaluationTable et = comp.evaluationTable(e.getValue());
             for (ClusterEvaluation eval : evals) {
-                sb.append(format(eval.score(c))).append(sep);
+                sb.append(format(et.getScore(eval))).append(sep);
             }
             sb.append(String.format("%.0f", rank)).append(sep);
             sb.append(c.size());
