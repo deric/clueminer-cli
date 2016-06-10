@@ -188,41 +188,52 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             } else {
                 params.experiment = params.experiment + File.separatorChar + safeName(dataset.getName());
             }
-            ExecutorService pool = Executors.newFixedThreadPool(1);
-            MetaSearch<I, E, C> metaSearch = new MetaSearch<>();
+            ExecutorService pool = Executors.newFixedThreadPool(params.repeat);
+            Future<ParetoFrontQueue> future;
+            MetaSearch<I, E, C> metaSearch;
+
+            metaSearch = new MetaSearch<>();
             metaSearch.setDataset(dataset);
             Callable<ParetoFrontQueue> callable = metaSearch;
-            Future<ParetoFrontQueue> future = pool.submit(callable);
 
-            try {
-                ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
-                SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
-                if (evals != null) {
-                    export.exportFront(ranking, evals, export.resultsFile("pareto-front"));
+            for (int run = 0; run < params.repeat; run++) {
+                System.out.println("==== RUN " + run);
+                future = pool.submit(callable);
+                try {
+                    if (future != null) {
+                        ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
+                        SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
+                        if (evals != null) {
+                            export.exportFront(ranking, evals, export.resultsFile("pareto-front-" + run));
+                        }
+
+                        //internal evaluation
+                        InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
+                        File res = export.createNewFile(dataset, "internal-" + run);
+                        evals = ief.getAllArray();
+                        export.ranking(ranking, evals, res);
+
+                        //ranking correlation
+                        ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(params.optEval);
+                        res = export.resultsFile(dataset.getName() + "-correlation");
+                        export.correlation(ranking, evals, res, supervised, q);
+
+                        //supervised coefficients
+                        ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
+                        res = export.createNewFile(dataset, "external-" + run);
+                        evals = eef.getAllArray();
+                        export.ranking(ranking, evals, res);
+
+                        System.out.println("best template: " + q.poll().getParams().toJson());
+                    } else {
+                        throw new RuntimeException("there's no future in here");
+                    }
+                } catch (InterruptedException | ExecutionException ex) {
+                    Exceptions.printStackTrace(ex);
                 }
-
-                //internal evaluation
-                InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
-                File res = export.createNewFile(dataset, "internal");
-                evals = ief.getAllArray();
-                export.ranking(ranking, evals, res);
-
-                //ranking correlation
-                ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(params.optEval);
-                res = export.createNewFile(dataset, "correlation");
-                export.correlation(ranking, evals, res, supervised, q);
-
-                //supervised coefficients
-                ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
-                res = export.createNewFile(dataset, "external");
-                evals = eef.getAllArray();
-                export.ranking(ranking, evals, res);
-
-                System.out.println("best template: " + q.poll().getParams().toJson());
-            } catch (InterruptedException | ExecutionException ex) {
-                Exceptions.printStackTrace(ex);
             }
             export.writeMeta(metaSearch.getMeta(), dataset);
+
             pool.shutdown();
             //System.exit(0);
             return;

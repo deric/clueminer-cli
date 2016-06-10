@@ -172,7 +172,9 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         }
 
         //write header
-        writeCsvLine(results, res.keySet().toArray(new String[0]), false);
+        if (!results.exists()) {
+            writeCsvLine(results, res.keySet().toArray(new String[0]), false);
+        }
         writeCsvLine(results, res.values().toArray(new String[0]), true);
     }
 
