@@ -207,6 +207,12 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 evals = ief.getAllArray();
                 export.ranking(ranking, evals, res);
 
+                //ranking correlation
+                ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(params.optEval);
+                res = export.createNewFile(dataset, "correlation");
+                export.correlation(ranking, evals, res, supervised, q);
+
+                //supervised coefficients
                 ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
                 res = export.createNewFile(dataset, "external");
                 evals = eef.getAllArray();

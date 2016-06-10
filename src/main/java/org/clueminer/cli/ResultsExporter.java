@@ -21,18 +21,25 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.logging.Logger;
 import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
+import org.clueminer.clustering.api.Rank;
 import org.clueminer.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
+import org.clueminer.eval.utils.ClusteringComparator;
 import org.clueminer.evolution.api.Individual;
+import org.clueminer.meta.ranking.ParetoFrontQueue;
+import org.clueminer.rank.Spearman;
 import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
 
@@ -111,7 +118,61 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
 
             evaluate(clustering, evals, results, meta);
         }
+    }
 
+    /**
+     * Compute correlation between supervised ranking and unsupervised ones.
+     *
+     * @param ranking    multi-objective ranking
+     * @param evals
+     * @param results
+     * @param supervised reference sorting
+     * @param q          Pareto queue
+     */
+    public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q) {
+        Rank rankCmp = new Spearman();
+        HashMap<Integer, Integer> map = new HashMap<>(ranking.size());
+        ClusteringComparator comp = new ClusteringComparator(supervised);
+        Clustering[] mo = new Clustering[ranking.size()];
+        Clustering[] ref = new Clustering[ranking.size()];
+        int i = 0;
+        for (Clustering c : ranking.values()) {
+            mo[i] = c;
+            ref[i] = c;
+            i++;
+        }
+        Arrays.sort(ref, comp);
+        System.out.println("Reference:");
+        for (int j = 0; j < ref.length; j++) {
+            System.out.println(j + ": " + comp.evaluationTable(ref[j]).getScore(supervised) + ", ID: " + ref[j].getId());;
+            //Clustering clustering = ref[j];
+        }
+        System.out.println("MO!");
+        for (Entry<Double, Clustering<E, C>> e : ranking.entrySet()) {
+            System.out.println(e.getKey() + ": " + comp.evaluationTable(e.getValue()).getScore(supervised));
+            //Clustering clustering = ref[j];
+        }
+        double corr = rankCmp.correlation(mo, ref, map);
+        StringBuilder sb = new StringBuilder();
+        for (ClusterEvaluation ev : q.getObjectives()) {
+            sb.append(ev.getName()).append("&");
+        }
+        sb.append(q.getSortingObjectives().getName());
+        System.out.println(sb.toString() + ": " + corr);
+
+        Map<String, String> res = new TreeMap<>();
+        res.put(sb.toString(), df.format(corr));
+
+        for (ClusterEvaluation e : evals) {
+            comp.setEvaluator(e);
+            Arrays.sort(mo, comp);
+            corr = rankCmp.correlation(mo, ref, map);
+            res.put(e.getName(), df.format(corr));
+        }
+
+        //write header
+        writeCsvLine(results, res.keySet().toArray(new String[0]), false);
+        writeCsvLine(results, res.values().toArray(new String[0]), true);
     }
 
     /**
@@ -243,6 +304,13 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         writeCsvLine(file, cols, apend);
     }
 
+    /**
+     * Write a line into given CSV file
+     *
+     * @param file
+     * @param columns
+     * @param apend
+     */
     public void writeCsvLine(File file, String[] columns, boolean apend) {
         try (PrintWriter writer = new PrintWriter(
                 new FileOutputStream(file, apend)
