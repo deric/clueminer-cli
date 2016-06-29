@@ -18,6 +18,7 @@ package org.clueminer.cli;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
+import org.clueminer.log.ClmLog;
 
 /**
  * Simple CLI for running clustering algorithms.
@@ -30,6 +31,7 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        ClmLog.setup("info");
         Params p = parseArguments(args);
         Runner runner = new Runner(p);
         runner.run();

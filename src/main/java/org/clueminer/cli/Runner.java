@@ -109,12 +109,14 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 p.type = "arff";
             } else {
                 p.type = df.type;
+                LOGGER.log(Level.INFO, "auto-detected type {0}", p.type);
             }
         }
         //guess number of attributes
         //TODO: we should be able to estimate number of lines
         dataset = new ArrayDataset(150, df.numAttributes);
 
+        LOGGER.log(Level.INFO, "parsing dataset as {0}", p.type);
         switch (p.type) {
             case "csv":
                 CsvLoader csvLoad = new CsvLoader();
