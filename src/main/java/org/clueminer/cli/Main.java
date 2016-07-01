@@ -31,8 +31,8 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        ClmLog.setup("info");
         Params p = parseArguments(args);
+        ClmLog.setup(p.logLevel);
         Runner runner = new Runner(p);
         runner.run();
     }

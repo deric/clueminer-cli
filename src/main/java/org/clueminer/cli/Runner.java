@@ -16,6 +16,7 @@
  */
 package org.clueminer.cli;
 
+import com.google.gson.JsonSyntaxException;
 import edu.umn.cluto.Cluto;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -254,9 +255,15 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             params.experiment = safeName(params.algorithm);
         }
 
-        Props prop;
+        Props prop = null;
         if (params.algParams != null) {
-            prop = Props.fromJson(params.algParams);
+            try {
+                prop = Props.fromJson(params.algParams);
+            } catch (JsonSyntaxException e) {
+                System.err.println("ERROR: Failed to parse algorithm parameters: '" + params.algParams + "'. Make sure you'll pass a valid JSON.");
+                Exceptions.printStackTrace(e);
+                System.exit(2);
+            }
         } else {
             prop = new Props();
         }
