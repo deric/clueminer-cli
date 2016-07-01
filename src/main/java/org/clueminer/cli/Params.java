@@ -106,4 +106,7 @@ public class Params {
     @Parameter(names = {"--meta-search", "-mts"}, description = "tris to find optimal algorithm for given data")
     public boolean metaSearch = false;
 
+    @Parameter(names = {"--log", "-l"}, description = "Log level: WARNING, SEVERE, FINE, FINER, FINEST")
+    public String logLevel = "info";
+
 }
