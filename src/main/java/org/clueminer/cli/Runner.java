@@ -435,20 +435,15 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
                     return findBestHclust(configs, exec, dataset, def, evals);
                 default:
-                    //ch2
+                    //ch2 - configuration is merged with user supplied config
                     configs = new String[]{
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1}", //auto
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:3.0,interconnectivity_priority:1.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:1.0,interconnectivity_priority:2.0}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:Standard}", //std
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,noise_detection:1}", //noise detection
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:1.0,interconnectivity_priority:2.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1}",
-                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0,noise_detection:1,k:10}"
+                        "{closeness_priority:2.0,interconnectivity_priority:4.0}",
+                        "{closeness_priority:2.0,interconnectivity_priority:3.0}",
+                        "{closeness_priority:3.0,interconnectivity_priority:1.0}",
+                        "{closeness_priority:1.0,interconnectivity_priority:2.0}",
+                        "{closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
+                        "{closeness_priority:2.0,interconnectivity_priority:1.0,k:15}",
+                        "{closeness_priority:2.0,interconnectivity_priority:1.0,k:10}"
                     };
 
                     return findBestHclust(configs, exec, dataset, def, evals);
