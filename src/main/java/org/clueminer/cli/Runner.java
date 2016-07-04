@@ -442,8 +442,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         "{closeness_priority:3.0,interconnectivity_priority:1.0}",
                         "{closeness_priority:1.0,interconnectivity_priority:2.0}",
                         "{closeness_priority:2.0,interconnectivity_priority:4.0,k:14}",
-                        "{closeness_priority:2.0,interconnectivity_priority:1.0,k:15}",
-                        "{closeness_priority:2.0,interconnectivity_priority:1.0,k:10}"
+                        "{closeness_priority:2.0,interconnectivity_priority:1.0,k:25}",
+                        "{closeness_priority:2.0,interconnectivity_priority:1.0,k:3}"
                     };
 
                     return findBestHclust(configs, exec, dataset, def, evals);
