@@ -371,7 +371,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             String[] configs;
             switch (params.method) {
                 case "Ch1":
-                    String ch1 = "cutoff-strategy:External_cutoff,similarity_measure:Standard,partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
+                    //overwrite only necessary parameters
+                    String ch1 = "partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
                     configs = new String[]{
                         "{" + ch1 + ",ctype=h12}",
                         "{" + ch1 + ",ctype=fc1}",
@@ -470,7 +471,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 score = eval.score(clustering, prop);
             } catch (ScoreException ex) {
                 score = Double.NaN;
-                LOGGER.warning("failed to compute score " + eval.getName() + ": " + ex.getMessage());
+                LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
             }
             if (eval.isBetter(score, maxScore)) {
                 maxScore = score;
