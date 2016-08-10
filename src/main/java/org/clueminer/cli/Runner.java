@@ -279,6 +279,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 prop = flatPartitioning(dataset, prop, algorithm, evals, run);
             }
             LOGGER.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
+            LOGGER.log(Level.INFO, "total time {0}ms, in seconds: {1}", new Object[]{time.formatMs(), time.formatSec()});
+
         }
     }
 
@@ -325,6 +327,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
         if (res != null) {
             clustering = res.getClustering();
+            clustering.lookupAdd(time);
             if (evals != null) {
                 export.evaluate(clustering, evals, dataset);
             }
