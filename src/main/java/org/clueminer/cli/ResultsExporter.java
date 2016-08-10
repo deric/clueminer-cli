@@ -327,6 +327,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         StopWatch time = clustering.getLookup().lookup(StopWatch.class);
         if (time != null) {
             line[i++] = df.format(time.timeInMs());
+            System.out.println("time = " + time.timeInSec() + "s");
         } else {
             line[i++] = "";
         }

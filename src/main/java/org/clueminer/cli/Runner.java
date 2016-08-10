@@ -310,7 +310,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         } else {
             res = stdHierarchical(exec, dataset, prop);
         }
-        time.endMeasure();
         if (res != null) {
             if (params.matrix) {
                 if (res.getProximityMatrix() != null) {
@@ -352,8 +351,16 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         Clustering clustering;
         switch (params.cluster) {
             case "rows":
-                clustering = exec.clusterRows(dataset, prop);
-                mapping = clustering.getLookup().lookup(DendrogramData.class);
+                HierarchicalResult rowsResult = exec.hclustRows(dataset, prop);
+                time.endMeasure();
+                //don't count time required for finding best cutoff into total
+                exec.findCutoff(rowsResult, prop);
+                mapping = new DendrogramData(dataset, rowsResult);
+
+                clustering = rowsResult.getClustering();
+                clustering.mergeParams(prop);
+                clustering.lookupAdd(mapping);
+
                 res = mapping.getRowsResult();
                 break;
             case "columns":
@@ -468,8 +475,10 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             prop = def.copy();
             prop.merge(Props.fromJson(config));
             System.out.println("using prop: " + prop.toString());
+            time = new StopWatch(true);
             res = stdHierarchical(exec, dataset, prop);
             clustering = res.getClustering();
+            clustering.lookupAdd(time);
             try {
                 score = eval.score(clustering, prop);
             } catch (ScoreException ex) {
