@@ -18,6 +18,8 @@ package org.clueminer.cli;
 
 import com.beust.jcommander.Parameter;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import org.clueminer.utils.FileUtils;
 import org.openide.util.NbBundle;
 
@@ -54,9 +56,6 @@ public class Params {
 
     @Parameter(names = {"--algorithm", "-a"}, description = "name of the algorithm", required = false)
     public String algorithm;
-
-    @Parameter(names = {"--alg-params", "-p"}, description = "parameters of the algorithm", required = false)
-    public String algParams;
 
     @Parameter(names = "--cluster", description = "run clustering of rows, columns or both", required = false)
     public String cluster = "both";
@@ -108,5 +107,25 @@ public class Params {
 
     @Parameter(names = {"--log", "-l"}, description = "Log level: WARNING, SEVERE, FINE, FINER, FINEST")
     public String logLevel = "info";
+
+    /**
+     * A hack to support passing json containing whitespaces
+     */
+    @Parameter(names = {"--alg-params", "-p"}, variableArity = true, description = "parameters of the algorithm", splitter = NoopSplitter.class)
+    public List<String> params = new ArrayList<>();
+
+    private String p;
+
+    public String getParams() {
+        if (p == null) {
+            StringBuilder sb = new StringBuilder();
+            for (String s : params) {
+                sb.append(s).append(" ");
+            }
+            p = sb.toString();
+
+        }
+        return p;
+    }
 
 }

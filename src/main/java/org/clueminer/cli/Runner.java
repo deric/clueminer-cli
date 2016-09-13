@@ -256,11 +256,12 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
 
         Props prop = null;
-        if (params.algParams != null) {
+        String p = params.getParams();
+        if (!p.isEmpty()) {
             try {
-                prop = Props.fromJson(params.algParams);
+                prop = Props.fromJson(p);
             } catch (JsonSyntaxException e) {
-                System.err.println("ERROR: Failed to parse algorithm parameters: '" + params.algParams + "'. Make sure you'll pass a valid JSON.");
+                System.err.println("ERROR: Failed to parse algorithm parameters: '" + p + "'. Make sure you'll pass a valid JSON.");
                 Exceptions.printStackTrace(e);
                 System.exit(2);
             }
