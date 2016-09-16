@@ -16,6 +16,8 @@
  */
 package org.clueminer.cli;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import com.google.gson.JsonSyntaxException;
 import edu.umn.cluto.Cluto;
 import java.awt.image.BufferedImage;
@@ -161,8 +163,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         return dataset;
     }
 
-    protected ClusteringAlgorithm parseAlgorithm(Params p) {
-        ClusteringAlgorithm algorithm = ClusteringFactory.getInstance().getProvider(p.algorithm);
+    protected ClusteringAlgorithm parseAlgorithm(String alg) {
+        ClusteringAlgorithm algorithm = ClusteringFactory.getInstance().getProvider(alg);
         return algorithm;
     }
 
@@ -243,30 +245,42 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             return;
         }
 
-        ClusteringAlgorithm algorithm = parseAlgorithm(params);
-        for (Entry<Integer, Attribute> e : dataset.getAttributes().entrySet()) {
-            System.out.println(e.getKey() + ": " + e.getValue());
-        }
-
-        if (algorithm == null) {
-            throw new RuntimeException("failed to load algorithm '" + params.algorithm + "'");
-        }
-        if (params.experiment == null) {
-            params.experiment = safeName(params.algorithm);
-        }
-
         Props prop = null;
         String p = params.getParams();
         if (!p.isEmpty()) {
+            if (!p.startsWith("{")) {
+                File f = new File(p.trim());
+                if (f.exists()) {
+                    try {
+                        p = Files.toString(f, Charsets.UTF_8);
+                    } catch (IOException ex) {
+                        Exceptions.printStackTrace(ex);
+                    }
+                }
+            }
             try {
                 prop = Props.fromJson(p);
-            } catch (JsonSyntaxException e) {
+            } catch (JsonSyntaxException | IllegalStateException e) {
                 System.err.println("ERROR: Failed to parse algorithm parameters: '" + p + "'. Make sure you'll pass a valid JSON.");
                 Exceptions.printStackTrace(e);
                 System.exit(2);
             }
         } else {
             prop = new Props();
+        }
+        LOGGER.log(Level.INFO, "params: {0}", prop.toString());
+
+        String alg = prop.get("algorithm", params.algorithm);
+        ClusteringAlgorithm algorithm = parseAlgorithm(alg);
+        for (Entry<Integer, Attribute> e : dataset.getAttributes().entrySet()) {
+            System.out.println(e.getKey() + ": " + e.getValue());
+        }
+
+        if (algorithm == null) {
+            throw new RuntimeException("failed to load algorithm '" + alg + "'");
+        }
+        if (params.experiment == null) {
+            params.experiment = safeName(alg);
         }
 
         if (params.hintK) {
@@ -334,6 +348,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
+            LOGGER.log(Level.INFO, "got {0} clusters", clustering.size());
         }
         return prop;
     }
@@ -505,6 +520,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
 
         if (clustering != null) {
+            LOGGER.log(Level.INFO, "got {0} clusters", clustering.size());
             export.evaluate(clustering, evals, dataset);
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);

@@ -58,7 +58,7 @@ public class Params {
     public String algorithm;
 
     @Parameter(names = "--cluster", description = "run clustering of rows, columns or both", required = false)
-    public String cluster = "both";
+    public String cluster = "rows";
 
     @Parameter(names = "--tree", description = "print dendrogram tree", required = false)
     public boolean tree = false;
@@ -111,7 +111,7 @@ public class Params {
     /**
      * A hack to support passing json containing whitespaces
      */
-    @Parameter(names = {"--alg-params", "-p"}, variableArity = true, description = "parameters of the algorithm", splitter = NoopSplitter.class)
+    @Parameter(names = {"--alg-params", "-p"}, variableArity = true, description = "parameters of the algorithm as JSON (or path to JSON file)", splitter = NoopSplitter.class)
     public List<String> params = new ArrayList<>();
 
     private String p;
