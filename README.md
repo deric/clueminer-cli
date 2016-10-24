@@ -34,3 +34,8 @@ mo clust:
 ```
 ./run -d ~/_bench/artificial/compound.arff -t arff -e "AIC,NMI-sqrt" -a Chameleon --cluster rows -exp Ch2-mo-ICS -p "{cutoff-strategy:External_cutoff,merger:MOM-HS,mo_objective_1:ICS,mo_objective_2:CLS,mo_sort:Shatovska,debug:2}"
 ```
+chameleon:
+
+```
+ ./run -d ~/_bench/artificial/aggregation.arff -t arff -a Chameleon --cluster rows -p "{k-estim:cln2,cutoff-strategy:External_cutoff}" -e "NMI-sqrt"
+```
