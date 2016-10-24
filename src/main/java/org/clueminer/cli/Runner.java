@@ -417,6 +417,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     //ch2 - without noise detection
                     configs = new String[]{
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1}", //auto
+                        "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,k-estim:log10}", //higher k
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:4.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:2.0,interconnectivity_priority:3.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:BBK1,closeness_priority:3.0,interconnectivity_priority:1.0}",
@@ -465,7 +466,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 default:
                     //ch2 - configuration is merged with user supplied config
                     configs = new String[]{
-                        "{closeness_priority:2.0,interconnectivity_priority:4.0}",
+                        "{k-estim:log10}",
                         "{closeness_priority:2.0,interconnectivity_priority:3.0}",
                         "{closeness_priority:3.0,interconnectivity_priority:1.0}",
                         "{closeness_priority:1.0,interconnectivity_priority:2.0}",
