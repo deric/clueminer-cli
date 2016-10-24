@@ -450,6 +450,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     //ch2
                     configs = new String[]{
                         "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + "}", //auto
+                        "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",k-estim:log10}", //higher k
                         "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:2.0,interconnectivity_priority:4.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:3.0,interconnectivity_priority:1.0}",
                         "{cutoff-strategy:External_cutoff,similarity_measure:" + sim + ",closeness_priority:1.0,interconnectivity_priority:2.0}",
