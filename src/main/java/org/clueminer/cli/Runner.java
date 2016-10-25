@@ -24,7 +24,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -55,7 +54,6 @@ import org.clueminer.clustering.api.factory.EvaluationFactory;
 import org.clueminer.clustering.api.factory.ExternalEvaluatorFactory;
 import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
 import org.clueminer.clustering.struct.DendrogramData;
-import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.impl.ArrayDataset;
@@ -272,10 +270,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
         String alg = prop.get("algorithm", params.algorithm);
         ClusteringAlgorithm algorithm = parseAlgorithm(alg);
-        for (Entry<Integer, Attribute> e : dataset.getAttributes().entrySet()) {
-            System.out.println(e.getKey() + ": " + e.getValue());
-        }
-
         if (algorithm == null) {
             throw new RuntimeException("failed to load algorithm '" + alg + "'");
         }
