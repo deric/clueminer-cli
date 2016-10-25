@@ -389,10 +389,11 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         if (exec.getAlgorithm() instanceof Chameleon) {
             //test several configurations and return best result
             String[] configs;
+            String ch1;
             switch (params.method) {
                 case "Ch1":
                     //overwrite only necessary parameters
-                    String ch1 = "partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
+                    ch1 = "partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
                     configs = new String[]{
                         "{" + ch1 + ",ctype=h12}",
                         "{" + ch1 + ",ctype=fc1}",
@@ -406,6 +407,39 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         "{" + ch1 + ",ctype=gedge1}",
                         "{" + ch1 + ",ctype=gedge2}"
                     };
+                    return findBestHclust(configs, exec, dataset, def, evals);
+                case "Ch2-hmetis":
+                    ch1 = "partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
+                    String[] ch2c = new String[]{
+                        "k-estim:log10",
+                        "closeness_priority:2.0,interconnectivity_priority:3.0",
+                        "closeness_priority:3.0,interconnectivity_priority:1.0",
+                        "closeness_priority:1.0,interconnectivity_priority:2.0",
+                        "closeness_priority:2.0,interconnectivity_priority:4.0,k:14",
+                        "closeness_priority:2.0,interconnectivity_priority:1.0,k:25",
+                        "closeness_priority:2.0,interconnectivity_priority:1.0,k:3"
+                    };
+                    String[] ch1c = new String[]{
+                        ",ctype=h12",
+                        ",ctype=fc1",
+                        ",ctype=fc2",
+                        ",ctype=gfc1",
+                        ",ctype=gfc2",
+                        ",ctype=h1",
+                        ",ctype=h2",
+                        ",ctype=edge1",
+                        ",ctype=edge2",
+                        ",ctype=gedge1",
+                        ",ctype=gedge2"
+                    };
+                    //cartesian product
+                    configs = new String[ch1c.length * ch2c.length];
+                    int i = 0;
+                    for (String c1 : ch1c) {
+                        for (String c2 : ch2c) {
+                            configs[i++] = "{" + ch1 + c1 + "," + c2 + "}";
+                        }
+                    }
                     return findBestHclust(configs, exec, dataset, def, evals);
                 case "Ch2nn":
                     //ch2 - without noise detection
