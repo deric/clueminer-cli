@@ -495,6 +495,10 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     //ch2 - configuration is merged with user supplied config
                     configs = new String[]{
                         "{k-estim:log10}",
+                        "{k-estim:10ln}",
+                        "{k-estim:8ln}",
+                        "{k-estim:4ln}",
+                        "{k-estim:cln}",
                         "{closeness_priority:2.0,interconnectivity_priority:3.0}",
                         "{closeness_priority:3.0,interconnectivity_priority:1.0}",
                         "{closeness_priority:1.0,interconnectivity_priority:2.0}",
