@@ -48,6 +48,8 @@ import org.clueminer.eval.utils.ClusteringComparator;
 import org.clueminer.evolution.api.Individual;
 import org.clueminer.meta.ranking.ParetoFrontQueue;
 import org.clueminer.rank.Spearman;
+import org.clueminer.utils.PropType;
+import org.clueminer.utils.Props;
 import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
 
@@ -302,7 +304,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             throw new RuntimeException("dataset not in clustering lookup!");
         }
         String[] line;
-        int extraAttr = 4;
+        int extraAttr = 5;
         double score;
 
         //header
@@ -317,6 +319,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                 line[i++] = e.getName();
             }
             line[i++] = "template";
+            line[i++] = "alg time";
             writeCsvLine(results, line, false);
         }
 
@@ -347,6 +350,8 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         }
         System.out.println("");
         line[i++] = clustering.getParams().toJson();
+        Props p = clustering.getParams();
+        line[i++] = String.valueOf(p.get(PropType.PERFORMANCE, "time", -1));
         writeCsvLine(results, line, true);
     }
 
