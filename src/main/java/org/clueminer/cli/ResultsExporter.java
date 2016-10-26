@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.logging.Logger;
 import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
@@ -52,6 +51,8 @@ import org.clueminer.utils.PropType;
 import org.clueminer.utils.Props;
 import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Write results into CSV files.
@@ -63,7 +64,7 @@ import org.openide.util.Exceptions;
  */
 public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> {
 
-    private static final Logger LOGGER = Logger.getLogger(ResultsExporter.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ResultsExporter.class);
     private final Runner<I, E, C> runner;
     private final DecimalFormat df;
 
@@ -252,6 +253,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                 line[i++] = e.getName();
             }
             line[i++] = "template";
+            line[i++] = "alg time";
             writeCsvLine(results, line, false);
         }
 
@@ -266,7 +268,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         } else {
             line[i++] = "";
         }
-        System.out.print("Evaluating scores " + clustering.fingerprint());
+        LOGGER.info("Evaluating scores " + clustering.fingerprint());
         ClusteringComparator comp = new ClusteringComparator();
         EvaluationTable et = comp.evaluationTable(clustering);
         try {
@@ -334,21 +336,25 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         } else {
             line[i++] = "";
         }
-        System.out.print("Evaluating scores " + clustering.fingerprint());
-        ClusteringComparator comp = new ClusteringComparator();
-        EvaluationTable et = comp.evaluationTable(clustering);
-        try {
-            for (ClusterEvaluation e : evals) {
-                score = et.getScore(e);
-                line[i++] = String.valueOf(score);
-                System.out.print(".");
-                //System.out.println(e.getName() + ": " + score);
+        if (evals.length == 0) {
+            LOGGER.warn("no evaluation method specified");
+        } else {
+            LOGGER.info("Evaluating scores " + clustering.fingerprint());
+            ClusteringComparator comp = new ClusteringComparator();
+            EvaluationTable et = comp.evaluationTable(clustering);
+            try {
+                for (ClusterEvaluation e : evals) {
+                    score = et.getScore(e);
+                    line[i++] = String.valueOf(score);
+                    System.out.print(".");
+                    //System.out.println(e.getName() + ": " + score);
+                }
+            } catch (Exception e) {
+                System.out.println("clustering " + clustering.getParams().toJson());
+                Exceptions.printStackTrace(e);
             }
-        } catch (Exception e) {
-            System.out.println("clustering " + clustering.getParams().toJson());
-            Exceptions.printStackTrace(e);
+            System.out.println("");
         }
-        System.out.println("");
         line[i++] = clustering.getParams().toJson();
         Props p = clustering.getParams();
         line[i++] = String.valueOf(p.get(PropType.PERFORMANCE, "time", -1));
