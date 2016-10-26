@@ -282,6 +282,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
         time = new StopWatch(false);
         for (int run = 0; run < params.repeat; run++) {
+            LOG.debug("executing {}", prop.toJson());
             if (algorithm instanceof AgglomerativeClustering) {
                 prop = hierachical(dataset, prop, algorithm, evals, run);
             } else {
