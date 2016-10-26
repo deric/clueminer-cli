@@ -64,7 +64,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResultsExporter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ResultsExporter.class);
     private final Runner<I, E, C> runner;
     private final DecimalFormat df;
 
@@ -268,7 +268,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         } else {
             line[i++] = "";
         }
-        LOGGER.info("Evaluating scores " + clustering.fingerprint());
+        LOG.info("Evaluating scores " + clustering.fingerprint());
         ClusteringComparator comp = new ClusteringComparator();
         EvaluationTable et = comp.evaluationTable(clustering);
         try {
@@ -337,20 +337,19 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             line[i++] = "";
         }
         if (evals.length == 0) {
-            LOGGER.warn("no evaluation method specified");
+            LOG.warn("no evaluation method specified");
         } else {
-            LOGGER.info("Evaluating scores " + clustering.fingerprint());
+            LOG.info("Evaluating scores for " + clustering.fingerprint());
             ClusteringComparator comp = new ClusteringComparator();
             EvaluationTable et = comp.evaluationTable(clustering);
             try {
                 for (ClusterEvaluation e : evals) {
                     score = et.getScore(e);
                     line[i++] = String.valueOf(score);
-                    System.out.print(".");
-                    //System.out.println(e.getName() + ": " + score);
+                    LOG.debug(e.getName() + ": " + score);
                 }
             } catch (Exception e) {
-                System.out.println("clustering " + clustering.getParams().toJson());
+                LOG.info("clustering {}", clustering.getParams().toJson());
                 Exceptions.printStackTrace(e);
             }
             System.out.println("");

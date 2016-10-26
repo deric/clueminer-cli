@@ -30,8 +30,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.clueminer.ap.AffinityPropagation;
 import org.clueminer.chameleon.Chameleon;
@@ -73,6 +71,8 @@ import org.clueminer.utils.DatasetSniffer;
 import org.clueminer.utils.Props;
 import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -83,7 +83,7 @@ import org.openide.util.Exceptions;
  */
 public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(Runner.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(Runner.class);
     private final Params params;
     private StopWatch time;
     private final ResultsExporter export;
@@ -110,14 +110,14 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 p.type = "arff";
             } else {
                 p.type = df.type;
-                LOGGER.log(Level.INFO, "auto-detected type {0}", p.type);
+                LOG.info("auto-detected type {}", p.type);
             }
         }
         //guess number of attributes
         //TODO: we should be able to estimate number of lines
         dataset = new ArrayDataset(150, df.numAttributes);
 
-        LOGGER.log(Level.INFO, "parsing dataset as {0}", p.type);
+        LOG.info("parsing dataset as {}", p.type);
         switch (p.type) {
             case "csv":
                 CsvLoader csvLoad = new CsvLoader();
@@ -184,7 +184,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
         ClusterEvaluation[] evals = loadEvaluation(params.eval);
 
-        LOGGER.log(Level.INFO, "loaded dataset \"{2}\" with {0} instances, {1} attributes",
+        LOG.info("loaded dataset \"{}\" with {} instances, {} attributes",
                 new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
         if (params.metaSearch) {
             if (params.experiment == null) {
@@ -266,7 +266,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         } else {
             prop = new Props();
         }
-        LOGGER.log(Level.INFO, "params: {0}", prop.toString());
+        LOG.info("params: {}", prop.toString());
 
         String alg = prop.get("algorithm", params.algorithm);
         ClusteringAlgorithm algorithm = parseAlgorithm(alg);
@@ -287,8 +287,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             } else {
                 prop = flatPartitioning(dataset, prop, algorithm, evals, run);
             }
-            LOGGER.log(Level.INFO, "finished clustering [run {1}]: {0}", new Object[]{prop.toString(), run});
-            LOGGER.log(Level.INFO, "total time {0}ms, in seconds: {1}", new Object[]{time.formatMs(), time.formatSec()});
+            LOG.info("finished clustering [run {}]: {}", new Object[]{prop.toString(), run});
+            LOG.info("total time {}ms, in seconds: {}", new Object[]{time.formatMs(), time.formatSec()});
 
         }
     }
@@ -311,7 +311,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         if (!prop.containsKey(AlgParams.CUTOFF_STRATEGY)) {
             prop.put(AlgParams.CUTOFF_STRATEGY, params.cutoff);
         }
-        LOGGER.log(Level.INFO, "clustering rows/columns: {0}", params.cluster);
+        LOG.info("clustering rows/columns: {}", params.cluster);
         time.startMeasure();
         if (params.optimal) {
             res = optHierarchical(exec, dataset, prop, evals);
@@ -342,7 +342,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
-            LOGGER.log(Level.INFO, "got {0} clusters", clustering.size());
+            LOG.info("got {} clusters", clustering.size());
         }
         return prop;
     }
@@ -533,7 +533,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 score = eval.score(clustering, prop);
             } catch (ScoreException ex) {
                 score = Double.NaN;
-                LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
+                LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
             }
             if (eval.isBetter(score, maxScore)) {
                 maxScore = score;
@@ -554,14 +554,14 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
 
         if (clustering != null) {
-            LOGGER.log(Level.INFO, "got {0} clusters", clustering.size());
+            LOG.info("got {} clusters", clustering.size());
             export.evaluate(clustering, evals, dataset);
             if (run == 0 && params.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
             return clustering.getParams();
         } else {
-            LOGGER.log(Level.WARNING, "failed to find solution");
+            LOG.warn("failed to find solution");
         }
         return prop;
     }
@@ -590,7 +590,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             System.out.println("min = " + epsMin + ", max = " + epsMax);
             //we have to guess parameters
             double eps;
-            LOGGER.log(Level.INFO, "using method: {0}", params.method);
+            LOG.info("using method: {}", params.method);
             switch (params.method) {
                 case "sp"://search parameters (a.k.a. super-powers)
                     for (int i = 4; i <= 10; i++) {
@@ -603,7 +603,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                                 score = eval.score(curr, prop);
                             } catch (ScoreException ex) {
                                 score = Double.NaN;
-                                LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
+                                LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
                             }
                             System.out.println("eps = " + eps + " minPts = " + i + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
                             if (eval.isBetter(score, maxScore)) {
@@ -632,7 +632,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                                 score = eval.score(curr, prop);
                             } catch (ScoreException ex) {
                                 score = Double.NaN;
-                                LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
+                                LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
                             }
                             System.out.println("eps = " + eps + " minPts = " + bestPts + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
                             if (eval.isBetter(score, maxScore)) {
@@ -665,7 +665,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     score = eval.score(curr, prop);
                 } catch (ScoreException ex) {
                     score = Double.NaN;
-                    LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
+                    LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
                 }
                 System.out.println("shrink = " + shrink + " => " + eval.getName() + ": " + score + ", clusters: " + curr.size());
                 if (eval.isBetter(score, maxScore)) {
@@ -703,7 +703,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     score = eval.score(curr, conf);
                 } catch (ScoreException ex) {
                     score = Double.NaN;
-                    LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
+                    LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
                 }
                 if (eval.isBetter(score, maxScore)) {
                     maxScore = score;
@@ -713,7 +713,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 cnt++;
                 export.evaluate(curr, evals, dataset);
             }
-            LOGGER.log(Level.INFO, "best configuration: {0}", bestConf);
+            LOG.info("best configuration: {}", bestConf);
         } else if (algorithm instanceof AffinityPropagation) {
             /**
              * TODO: a heuristic to determine preference
@@ -741,7 +741,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     score = eval.score(curr, conf);
                 } catch (ScoreException ex) {
                     score = Double.NaN;
-                    LOGGER.log(Level.WARNING, "failed to compute score {0}: {1}", new Object[]{eval.getName(), ex.getMessage()});
+                    LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
                 }
                 if (eval.isBetter(score, maxScore)) {
                     maxScore = score;
@@ -751,11 +751,11 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 cnt++;
                 export.evaluate(curr, evals, dataset);
             }
-            LOGGER.log(Level.INFO, "best configuration: {0}", bestConf);
+            LOG.info("best configuration: {}", bestConf);
         } else {
             clustering = cluster(dataset, prop, algorithm);
         }
-        LOGGER.log(Level.INFO, "{0}: evaluated {1} clusterings", new Object[]{algorithm.getName(), cnt});
+        LOG.info("{}: evaluated {} clusterings", new Object[]{algorithm.getName(), cnt});
         return clustering;
     }
 
@@ -787,11 +787,11 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         double mult = 20.0;
         int width = (int) (params.width + dataset.attributeCount() * 40);
         int height = (int) (params.height + dataset.size() * mult);
-        LOGGER.log(Level.INFO, "resolution {0} x {1}", new Object[]{width, height});
+        LOG.info("resolution {} x {}", new Object[]{width, height});
         BufferedImage image = panel.getBufferedImage(width, height);
         String path = FileUtil.mkdir(workDir() + File.separatorChar + dataset.getName());
         File file = new File(path + File.separatorChar + safeName(params.algorithm) + ".png");
-        LOGGER.log(Level.INFO, "saving heatmap to {0}", file.getAbsolutePath());
+        LOG.info("saving heatmap to {}", file.getAbsolutePath());
         String format = "png";
         try {
             ImageIO.write(image, format, file);
@@ -812,7 +812,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     private void saveScatter(Clustering clustering, String subdir, ClusteringAlgorithm algorithm) {
         if (params.scatter) {
             String dir = FileUtil.mkdir(workDir() + File.separatorChar + subdir);
-            LOGGER.log(Level.INFO, "writing scatter to {0}", dir);
+            LOG.info("writing scatter to {}", dir);
             GnuplotScatter<Instance, Cluster<Instance>> scatter = new GnuplotScatter<>(dir);
             String title = algorithm.getName() + " - " + clustering.getParams().toString();
             scatter.plot(clustering, title);
