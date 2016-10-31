@@ -30,6 +30,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
 import org.clueminer.ap.AffinityPropagation;
 import org.clueminer.chameleon.Chameleon;
@@ -93,13 +95,35 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         this.export = new ResultsExporter(this);
     }
 
-    protected Dataset<E> parseFile(Params p) throws IOException, ParserError {
+    protected Dataset<E> loadData(Params p) throws IOException, ParserError {
+        Dataset<E> dataset;
+        if (p.generate != null) {
+            DataGenerator<E> gen = new DataGenerator<>();
+            int n = 100;
+            int d = 5;
+            Pattern pat = Pattern.compile("(\\d+)x(\\d+)");
+            Matcher m = pat.matcher(p.generate);
+            LOG.info("generate: {}", p.generate);
+            if (m.matches()) {
+                LOG.info("group0: {}", m.group(1));
+                LOG.info("group1: {}", m.group(2));
+                if (m.group(1) != null && !m.group(1).isEmpty()) {
+                    n = Integer.parseInt(m.group(1));
+                }
+                if (m.group(2) != null && !m.group(2).isEmpty()) {
+                    d = Integer.parseInt(m.group(2));
+                }
+            }
+
+            dataset = gen.generateData(n, d);
+            dataset.setName("generated date " + p.generate);
+            return dataset;
+        }
         File f = new File(p.data);
         if (!f.exists() || !f.canRead()) {
             throw new InvalidArgumentException("can't read from file " + p.data);
         }
 
-        Dataset<E> dataset;
         int clsIndex = p.clsIndex;
         ArrayList<Integer> skip = new ArrayList<>(1);
 
@@ -170,7 +194,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     public void run() {
         Dataset<E> dataset = null;
         try {
-            dataset = (Dataset<E>) parseFile(params);
+            dataset = (Dataset<E>) loadData(params);
         } catch (IOException | ParserError ex) {
             Exceptions.printStackTrace(ex);
         }

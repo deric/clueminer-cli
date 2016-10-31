@@ -27,8 +27,9 @@ import org.junit.Test;
 /**
  *
  * @author deric
+ * @param <E>
  */
-public class RunnerTest {
+public class RunnerTest<E extends Instance> {
 
     private final CommonFixture cf = new CommonFixture();
     private Runner subject;
@@ -48,7 +49,7 @@ public class RunnerTest {
         p.clsIndex = 4;
         p.type = "csv";
         p.header = false;
-        Dataset<? extends Instance> dataset = subject.parseFile(p);
+        Dataset<E> dataset = subject.loadData(p);
         assertEquals(150, dataset.size());
         assertEquals(4, dataset.attributeCount());
         assertEquals(3, dataset.getClasses().size());
@@ -59,7 +60,7 @@ public class RunnerTest {
         p.clsIndex = 4;
         p.header = false;
         p.type = "txt";
-        Dataset<? extends Instance> dataset = subject.parseFile(p);
+        Dataset<E> dataset = subject.loadData(p);
         assertEquals(150, dataset.size());
         //TODO attributes won't be created by this parser
         //assertEquals(4, dataset.attributeCount());
@@ -72,7 +73,7 @@ public class RunnerTest {
         p.clsIndex = -1;
         p.type = "arff";
         p.header = false;
-        Dataset<? extends Instance> dataset = subject.parseFile(p);
+        Dataset<E> dataset = subject.loadData(p);
         assertEquals(150, dataset.size());
         assertEquals(4, dataset.attributeCount());
         assertEquals(3, dataset.getClasses().size());

@@ -33,8 +33,11 @@ public class Params {
     public String home = System.getProperty("user.home") + File.separatorChar
             + NbBundle.getMessage(FileUtils.class, "FOLDER_Home");
 
-    @Parameter(names = {"--data", "-d"}, description = "path to dataset", required = true)
+    @Parameter(names = {"--data", "-d"}, description = "path to dataset", required = false)
     public String data;
+
+    @Parameter(names = {"--generate", "-g"}, description = "generate data e.g. 100x5", required = false)
+    public String generate;
 
     @Parameter(names = {"--type", "-t"}, description = "type of data (csv, txt, arff)", required = false)
     public String type;
