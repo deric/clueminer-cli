@@ -105,8 +105,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             Matcher m = pat.matcher(p.generate);
             LOG.info("generate: {}", p.generate);
             if (m.matches()) {
-                LOG.info("group0: {}", m.group(1));
-                LOG.info("group1: {}", m.group(2));
                 if (m.group(1) != null && !m.group(1).isEmpty()) {
                     n = Integer.parseInt(m.group(1));
                 }
