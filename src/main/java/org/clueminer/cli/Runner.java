@@ -116,7 +116,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             }
 
             dataset = gen.generateData(n, d);
-            dataset.setName("generated date " + p.generate);
             return dataset;
         }
         File f = new File(p.data);

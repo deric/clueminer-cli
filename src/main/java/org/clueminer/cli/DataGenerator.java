@@ -46,6 +46,7 @@ public class DataGenerator<E extends Instance> {
     public Dataset<E> generateData(int size, int dim) {
         LOG.info("generating data: {}x{}", size, dim);
         Dataset<E> dataset = new ArrayDataset<>(size, dim);
+        dataset.setName("g" + size + "x" + dim);
         for (int i = 0; i < dim; i++) {
             dataset.attributeBuilder().create("attr-" + i, "NUMERIC");
         }
