@@ -208,8 +208,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
         ClusterEvaluation[] evals = loadEvaluation(params.eval);
 
-        LOG.info("loaded dataset \"{}\" with {} instances, {} attributes",
-                new Object[]{dataset.size(), dataset.attributeCount(), dataset.getName()});
+        LOG.info("loaded dataset \"{}\" with {} instances, {} attributes", dataset.getName(), dataset.size(), dataset.attributeCount());
         if (params.metaSearch) {
             if (params.experiment == null) {
                 params.experiment = "meta-search" + File.separatorChar + safeName(dataset.getName());
