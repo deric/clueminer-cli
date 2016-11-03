@@ -50,13 +50,16 @@ public class DataGenerator<E extends Instance> {
         for (int i = 0; i < dim; i++) {
             dataset.attributeBuilder().create("attr-" + i, "NUMERIC");
         }
-        int numCasses = rand.nextInt(10);
+        int numClasses = rand.nextInt(10);
+        if (numClasses < 2) {
+            numClasses = 3;
+        }
         for (int i = 0; i < size; i++) {
             dataset.instance(i).setName(String.valueOf(i));
             for (int j = 0; j < dim; j++) {
                 dataset.set(i, j, rand.nextDouble());
             }
-            dataset.instance(i).setClassValue(rand.nextInt(numCasses));
+            dataset.instance(i).setClassValue(rand.nextInt(numClasses));
         }
 
         return dataset;
