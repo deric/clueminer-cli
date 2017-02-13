@@ -23,7 +23,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.Clustering;
-import org.clueminer.csv.CSVWriter;
+import org.clueminer.io.csv.CSVWriter;
 import org.clueminer.dataset.api.Attribute;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
