@@ -60,10 +60,10 @@ import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
 import org.clueminer.evolution.api.Individual;
 import org.clueminer.exception.ParserError;
-import org.clueminer.io.arff.ARFFHandler;
-import org.clueminer.io.csv.CsvLoader;
 import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
+import org.clueminer.io.arff.ARFFHandler;
+import org.clueminer.io.csv.CsvLoader;
 import org.clueminer.meta.engine.MetaSearch;
 import org.clueminer.meta.ranking.ParetoFrontQueue;
 import org.clueminer.plot.GnuplotLinePlot;
@@ -633,6 +633,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                                 bestEps = eps;
                                 bestPts = i;
                             }
+                            export.evaluate(curr, evals, dataset);
                             cnt++;
                             eps -= step; //eps increment
                             if (curr.size() == 1 || curr.size() >= maxSize) {
@@ -661,6 +662,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                                 clustering = curr;
                                 bestEps = eps;
                             }
+                            //TODO export will include same result twice
+                            export.evaluate(curr, evals, dataset);
                             cnt++;
                             eps -= step; //eps increment
                             if (curr.size() == 1 || curr.size() >= maxSize) {
