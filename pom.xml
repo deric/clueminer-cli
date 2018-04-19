@@ -155,7 +155,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>dendrogram</artifactId>
+            <artifactId>clustering-gui</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
