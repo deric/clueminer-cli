@@ -116,19 +116,33 @@ public class Params {
      */
     @Parameter(names = {"--alg-params", "-p"}, variableArity = true, description = "parameters of the algorithm as JSON (or path to JSON file)", splitter = NoopSplitter.class)
     public List<String> params = new ArrayList<>();
-
     private String p;
+
+    @Parameter(names = {"--meta-params", "-m"}, variableArity = true, description = "meta search configuration", splitter = NoopSplitter.class)
+    public List<String> metaParams = new ArrayList<>();
+
+    private String meta;
 
     public String getParams() {
         if (p == null) {
-            StringBuilder sb = new StringBuilder();
-            for (String s : params) {
-                sb.append(s).append(" ");
-            }
-            p = sb.toString();
-
+            p = concat(params);
         }
         return p;
+    }
+
+    public String getMetaParams() {
+        if (meta == null) {
+            meta = concat(metaParams);
+        }
+        return meta;
+    }
+
+    private String concat(List<String> list) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : list) {
+            sb.append(s).append(" ");
+        }
+        return sb.toString();
     }
 
 }

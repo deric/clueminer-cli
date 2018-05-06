@@ -86,12 +86,12 @@ import org.slf4j.LoggerFactory;
 public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(Runner.class);
-    private final Params params;
+    private final Params cliParams;
     private StopWatch time;
     private final ResultsExporter export;
 
     Runner(Params p) {
-        this.params = p;
+        this.cliParams = p;
         this.export = new ResultsExporter(this);
     }
 
@@ -191,7 +191,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     public void run() {
         Dataset<E> dataset = null;
         try {
-            dataset = (Dataset<E>) loadData(params);
+            dataset = (Dataset<E>) loadData(cliParams);
         } catch (IOException | ParserError ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -203,26 +203,29 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             throw new RuntimeException("missing dataset name");
         }
 
-        ClusterEvaluation[] evals = loadEvaluation(params.eval);
+        ClusterEvaluation[] evals = loadEvaluation(cliParams.eval);
 
         LOG.info("loaded dataset \"{}\" with {} instances, {} attributes", dataset.getName(), dataset.size(), dataset.attributeCount());
-        if (params.metaSearch) {
-            if (params.experiment == null) {
-                params.experiment = "meta-search" + File.separatorChar + safeName(dataset.getName());
+        if (cliParams.metaSearch) {
+            if (cliParams.experiment == null) {
+                cliParams.experiment = "meta-search" + File.separatorChar + safeName(dataset.getName());
             } else {
-                params.experiment = params.experiment + File.separatorChar + safeName(dataset.getName());
+                cliParams.experiment = cliParams.experiment + File.separatorChar + safeName(dataset.getName());
             }
-            ExecutorService pool = Executors.newFixedThreadPool(params.repeat);
+            ExecutorService pool = Executors.newFixedThreadPool(cliParams.repeat);
             Future<ParetoFrontQueue> future;
             MetaSearch<I, E, C> metaSearch;
             StopWatch evalTime;
 
             metaSearch = new MetaSearch<>();
+            String metaParams = cliParams.getMetaParams();
+            LOG.debug("meta-params: {}", metaParams);
+            metaSearch.configure(parseJson(metaParams));
             metaSearch.setDataset(dataset);
             Callable<ParetoFrontQueue> callable = metaSearch;
 
-            for (int run = 0; run < params.repeat; run++) {
-                System.out.println("==== RUN " + run);
+            for (int run = 0; run < cliParams.repeat; run++) {
+                LOG.info("RUN {}", run);
                 future = pool.submit(callable);
                 try {
                     if (future != null) {
@@ -239,9 +242,9 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         evals = ief.getAllArray();
                         export.ranking(ranking, evals, res);
 
-                        LOG.info("Computing correlation to {}", params.optEval);
+                        LOG.info("Computing correlation to {}", cliParams.optEval);
                         //ranking correlation
-                        ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(params.optEval);
+                        ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
                         res = export.resultsFile(dataset.getName() + "-correlation");
                         export.correlation(ranking, evals, res, supervised, q);
 
@@ -268,45 +271,23 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             return;
         }
 
-        Props prop = null;
-        String p = params.getParams();
-        if (!p.isEmpty()) {
-            if (!p.startsWith("{")) {
-                File f = new File(p.trim());
-                if (f.exists()) {
-                    try {
-                        p = Files.toString(f, Charsets.UTF_8);
-                    } catch (IOException ex) {
-                        Exceptions.printStackTrace(ex);
-                    }
-                }
-            }
-            try {
-                prop = Props.fromJson(p);
-            } catch (JsonSyntaxException | IllegalStateException e) {
-                System.err.println("ERROR: Failed to parse algorithm parameters: '" + p + "'. Make sure you'll pass a valid JSON.");
-                Exceptions.printStackTrace(e);
-                System.exit(2);
-            }
-        } else {
-            prop = new Props();
-        }
+        Props prop = parseJson(cliParams.getParams());
         LOG.info("params: {}", prop.toString());
 
-        String alg = prop.get("algorithm", params.algorithm);
+        String alg = prop.get("algorithm", cliParams.algorithm);
         ClusteringAlgorithm algorithm = parseAlgorithm(alg);
         if (algorithm == null) {
             throw new RuntimeException("failed to load algorithm '" + alg + "'");
         }
-        if (params.experiment == null) {
-            params.experiment = safeName(alg);
+        if (cliParams.experiment == null) {
+            cliParams.experiment = safeName(alg);
         }
 
-        if (params.hintK) {
+        if (cliParams.hintK) {
             prop.putInt(KMeans.K, dataset.getClasses().size());
         }
         time = new StopWatch(false);
-        for (int run = 0; run < params.repeat; run++) {
+        for (int run = 0; run < cliParams.repeat; run++) {
             LOG.debug("executing {}", prop.toJson());
             if (algorithm instanceof AgglomerativeClustering) {
                 prop = hierachical(dataset, prop, algorithm, evals, run);
@@ -317,6 +298,38 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             LOG.info("total time {}ms, in seconds: {}", new Object[]{time.formatMs(), time.formatSec()});
 
         }
+    }
+
+    /**
+     * Parse either JSON string or load JSON from a file (path to a file)
+     *
+     * @param json
+     * @return Props object (a hash map)
+     */
+    private Props parseJson(String json) {
+        Props prop = null;
+        if (!json.isEmpty()) {
+            if (!json.startsWith("{")) {
+                File f = new File(json.trim());
+                if (f.exists()) {
+                    try {
+                        json = Files.toString(f, Charsets.UTF_8);
+                    } catch (IOException ex) {
+                        Exceptions.printStackTrace(ex);
+                    }
+                }
+            }
+            try {
+                prop = Props.fromJson(json);
+            } catch (JsonSyntaxException | IllegalStateException e) {
+                System.err.println("ERROR: Failed to parse algorithm parameters: '" + json + "'. Make sure you'll pass a valid JSON.");
+                Exceptions.printStackTrace(e);
+                System.exit(2);
+            }
+        } else {
+            prop = new Props();
+        }
+        return prop;
     }
 
     private Clustering cluster(Dataset<? extends Instance> dataset, Props prop, ClusteringAlgorithm algorithm) {
@@ -335,28 +348,28 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         HierarchicalResult res;
 
         if (!prop.containsKey(AlgParams.CUTOFF_STRATEGY)) {
-            prop.put(AlgParams.CUTOFF_STRATEGY, params.cutoff);
+            prop.put(AlgParams.CUTOFF_STRATEGY, cliParams.cutoff);
         }
-        LOG.info("clustering rows/columns: {}", params.cluster);
+        LOG.info("clustering rows/columns: {}", cliParams.cluster);
         time.startMeasure();
-        if (params.optimal) {
+        if (cliParams.optimal) {
             res = optHierarchical(exec, dataset, prop, evals);
             prop = res.getClustering().getParams();
         } else {
             res = stdHierarchical(exec, dataset, prop);
         }
         if (res != null) {
-            if (params.matrix) {
+            if (cliParams.matrix) {
                 if (res.getProximityMatrix() != null) {
                     res.getProximityMatrix().printLower(5, 2);
                 }
             }
-            if (params.tree) {
+            if (cliParams.tree) {
                 res.getTreeData().print();
             }
 
-            if (params.heatmap) {
-                saveHeatmap(params, dataset, res.getDendrogramMapping());
+            if (cliParams.heatmap) {
+                saveHeatmap(cliParams, dataset, res.getDendrogramMapping());
             }
         }
         if (res != null) {
@@ -365,7 +378,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             if (evals != null) {
                 export.evaluate(clustering, evals, dataset);
             }
-            if (run == 0 && params.scatter) {
+            if (run == 0 && cliParams.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
             LOG.info("got {} clusters", clustering.size());
@@ -385,7 +398,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         HierarchicalResult res = null;
         DendrogramMapping mapping;
         Clustering clustering;
-        switch (params.cluster) {
+        switch (cliParams.cluster) {
             case "rows":
                 HierarchicalResult rowsResult = exec.hclustRows(dataset, prop);
                 time.endMeasure();
@@ -416,7 +429,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             //test several configurations and return best result
             String[] configs;
             String ch1;
-            switch (params.method) {
+            switch (cliParams.method) {
                 case "Ch1":
                     //overwrite only necessary parameters
                     ch1 = "partitioning:hMETIS,bisection:hMETIS,internal_noise_threshold:1,noise_detection:0";
@@ -486,7 +499,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 case "Ch2s4":
                 case "Ch2s5":
                     String sim;
-                    switch (params.method) {
+                    switch (cliParams.method) {
                         case "Ch2s2":
                             sim = "BBK2";
                             break;
@@ -543,7 +556,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     private HierarchicalResult findBestHclust(String[] configs, ClusteringExecutorCached exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
         double maxScore = 0.0, score;
         Props prop;
-        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
+        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
         Clustering clustering;
         HierarchicalResult res;
         HierarchicalResult bestRes = null;
@@ -573,7 +586,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     private Props flatPartitioning(Dataset<E> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering;
         //try to find optimal clustering
-        if (params.optimal) {
+        if (cliParams.optimal) {
             clustering = optFlatPartitioning(dataset, prop, algorithm, evals, run);
         } else {
             clustering = cluster(dataset, prop, algorithm);
@@ -582,7 +595,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         if (clustering != null) {
             LOG.info("got {} clusters", clustering.size());
             export.evaluate(clustering, evals, dataset);
-            if (run == 0 && params.scatter) {
+            if (run == 0 && cliParams.scatter) {
                 saveScatter(clustering, dataset.getName(), algorithm);
             }
             return clustering.getParams();
@@ -596,7 +609,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         Clustering clustering = null;
         Clustering curr;
         int cnt = 0;
-        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(params.optEval);
+        ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
         if (algorithm instanceof DBSCAN) {
             double bestEps = 0;
             int bestPts = 0;
@@ -616,8 +629,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             System.out.println("min = " + epsMin + ", max = " + epsMax);
             //we have to guess parameters
             double eps;
-            LOG.info("using method: {}", params.method);
-            switch (params.method) {
+            LOG.info("using method: {}", cliParams.method);
+            switch (cliParams.method) {
                 case "sp"://search parameters (a.k.a. super-powers)
                     for (int i = 4; i <= 10; i++) {
                         prop.putInt(DBSCAN.MIN_PTS, i);
@@ -795,7 +808,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     private ClusterEvaluation[] loadEvaluation(String metrics) {
         ClusterEvaluation[] evals = null;
         if (!metrics.isEmpty()) {
-            String[] names = params.eval.split(",");
+            String[] names = cliParams.eval.split(",");
             EvaluationFactory ef = EvaluationFactory.getInstance();
             if (names.length < 1) {
                 throw new RuntimeException("please provide comma separated names of metrics");
@@ -834,12 +847,12 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     }
 
     public String workDir() {
-        String path = params.home + File.separatorChar + params.experiment;
+        String path = cliParams.home + File.separatorChar + cliParams.experiment;
         return FileUtil.mkdir(path);
     }
 
     private void saveScatter(Clustering clustering, String subdir, ClusteringAlgorithm algorithm) {
-        if (params.scatter) {
+        if (cliParams.scatter) {
             String dir = FileUtil.mkdir(workDir() + File.separatorChar + subdir);
             LOG.info("writing scatter to {}", dir);
             GnuplotScatter<Instance, Cluster<Instance>> scatter = new GnuplotScatter<>(dir);
@@ -849,7 +862,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
     }
 
     public Params getParams() {
-        return params;
+        return cliParams;
     }
 
 }
