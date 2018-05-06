@@ -134,11 +134,11 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
     /**
      * Compute correlation between supervised ranking and unsupervised ones.
      *
-     * @param ranking    multi-objective ranking
+     * @param ranking multi-objective ranking
      * @param evals
      * @param results
      * @param supervised reference sorting
-     * @param q          Pareto queue
+     * @param q Pareto queue
      */
     public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q) {
         Rank rankCmp = new Spearman();
@@ -233,11 +233,11 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      * @param clustering will be exported one per row in CSV
      * @param evals
      * @param results
-     * @param meta       extra meta attributes
+     * @param meta extra meta attributes
      */
     public void evaluate(Clustering<E, C> clustering, ClusterEvaluation[] evals, File results, HashMap<String, String> meta) {
         String[] line;
-        int extraAttr = meta.size() + 2;
+        int extraAttr = meta.size() + 3;
         double score;
 
         //header
