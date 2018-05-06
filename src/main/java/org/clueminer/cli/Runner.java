@@ -215,6 +215,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             ExecutorService pool = Executors.newFixedThreadPool(params.repeat);
             Future<ParetoFrontQueue> future;
             MetaSearch<I, E, C> metaSearch;
+            StopWatch evalTime;
 
             metaSearch = new MetaSearch<>();
             metaSearch.setDataset(dataset);
@@ -225,6 +226,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 future = pool.submit(callable);
                 try {
                     if (future != null) {
+                        evalTime = new StopWatch(true);
                         ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
                         SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
                         if (evals != null) {
@@ -237,18 +239,21 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         evals = ief.getAllArray();
                         export.ranking(ranking, evals, res);
 
+                        LOG.info("Computing correlation to {}", params.optEval);
                         //ranking correlation
                         ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(params.optEval);
                         res = export.resultsFile(dataset.getName() + "-correlation");
                         export.correlation(ranking, evals, res, supervised, q);
 
                         //supervised coefficients
+                        LOG.info("Computing supervised cooeficients");
                         ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
                         res = export.createNewFile(dataset, "external-" + run);
                         evals = eef.getAllArray();
                         export.ranking(ranking, evals, res);
-
-                        System.out.println("best template: " + q.poll().getParams().toJson());
+                        LOG.info("best template: {}", q.poll().getParams().toJson());
+                        evalTime.endMeasure();
+                        LOG.info("computing evaluations took: {}s", evalTime.formatSec());
                     } else {
                         throw new RuntimeException("there's no future in here");
                     }
