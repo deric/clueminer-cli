@@ -249,7 +249,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         export.correlation(ranking, evals, res, supervised, q);
 
                         //supervised coefficients
-                        LOG.info("Computing supervised cooeficients");
+                        LOG.info("Computing unsupervised cooeficients");
                         ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
                         res = export.createNewFile(dataset, "external-" + run);
                         evals = eef.getAllArray();

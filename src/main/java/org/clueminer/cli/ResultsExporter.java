@@ -210,6 +210,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                 mo[i] = c;
                 i++;
             }
+            LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
             HashMap<Integer, Integer> map = new HashMap<>(ref.length);
             double corr = rankCmp.correlation(mo, ref, map);
             String moName = moName(q);
@@ -239,8 +240,9 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         String[] line;
         int extraAttr = meta.size() + 3;
         double score;
+        StopWatch etime = new StopWatch(false);
 
-        //header
+        //CSV header
         //logger.log(Level.INFO, "writing results into: {0}", results.getAbsolutePath());
         if (!results.exists()) {
             line = new String[evals.length + extraAttr];
@@ -257,6 +259,19 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             writeCsvLine(results, line, false);
         }
 
+        // csv stats for computing evaluation metrics
+        File criteriaCSV = new File(results.getParent() + File.separatorChar + "criteria.csv");
+        LOG.trace("criteria stats written to: {}", criteriaCSV.getAbsolutePath());
+        if (!criteriaCSV.exists()) {
+            line = new String[4];
+            line[0] = "objective";
+            line[1] = "time";
+            line[2] = "k";
+            line[3] = "fingerprint";
+
+            writeCsvLine(criteriaCSV, line, false);
+        }
+
         line = new String[evals.length + extraAttr];
         int i = 0;
         for (String m : meta.values()) {
@@ -271,12 +286,22 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         LOG.info("Evaluating scores " + clustering.fingerprint());
         ClusteringComparator comp = new ClusteringComparator();
         EvaluationTable et = comp.evaluationTable(clustering);
+        String[] criteria = new String[4];
         try {
             for (ClusterEvaluation e : evals) {
+                etime.startMeasure();
                 score = et.getScore(e);
+                etime.endMeasure();
                 line[i++] = String.valueOf(score);
                 System.out.print(".");
-                //System.out.println(e.getName() + ": " + score);
+                //export only external criteria
+                if (!e.isExternal()) {
+                    criteria[0] = e.getName();
+                    criteria[1] = etime.formatMs();
+                    criteria[2] = String.valueOf(clustering.size());
+                    criteria[3] = clustering.fingerprint();
+                    writeCsvLine(criteriaCSV, criteria, true);
+                }
             }
         } catch (Exception e) {
             System.out.println("clustering " + clustering.getParams().toJson());
