@@ -35,6 +35,8 @@ import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.EvaluationTable;
 import org.clueminer.clustering.api.Rank;
+import org.clueminer.clustering.api.factory.EvaluationFactory;
+import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
 import org.clueminer.io.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
@@ -139,8 +141,9 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      * @param results
      * @param supervised reference sorting
      * @param q Pareto queue
+     * @param params
      */
-    public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q) {
+    public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q, Props params) {
         Rank rankCmp = new Spearman();
         HashMap<Integer, Integer> map = new HashMap<>(ranking.size());
         ClusteringComparator comp = new ClusteringComparator(supervised);
@@ -176,7 +179,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             corr = rankCmp.correlation(mo, ref, map);
             res.put(e.getName(), df.format(corr));
         }
-        evaluateMOrank(res, ref, rankCmp);
+        evaluateMOrank(res, ref, rankCmp, params);
 
         //write header
         if (!results.exists()) {
@@ -185,37 +188,63 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         writeCsvLine(results, res.values().toArray(new String[0]), true);
     }
 
-    private void evaluateMOrank(Map<String, String> res, Clustering[] ref, Rank rankCmp) {
-        ClusterEvaluation[][] sets = new ClusterEvaluation[][]{
-            {new BIC<>(), new PointBiserialNorm<>(), new RatkowskyLance<>()},
-            {new CalinskiHarabasz<>(), new PointBiserialNorm<>(), new RatkowskyLance<>()},
-            {new CalinskiHarabasz<>(), new BIC<>(), new RatkowskyLance<>()},
-            {new BIC<>(), new RatkowskyLance<>(), new McClainRao<>()},};
+    /**
+     * Evaluate clustering ranking to a reference objective
+     *
+     * @param res
+     * @param ref
+     * @param rankCmp
+     * @param params
+     */
+    private void evaluateMOrank(Map<String, String> res, Clustering[] ref, Rank rankCmp, Props params) {
+        InternalEvaluatorFactory ef = InternalEvaluatorFactory.getInstance();
+        ClusterEvaluation[] objectives;
+        //e.g. "BIC,PointBiserial-Norm,Ratkowsky-Lance"
+        String criteria = params.get("mo-criteria", "all");
+        if (criteria.equals("all")) {
+            objectives = ef.getAllArray();
+        } else {
+            String[] crit = criteria.split(",");
+            objectives = new ClusterEvaluation[crit.length];
+            for (int i = 0; i < crit.length; i++) {
+                objectives[i] = (ClusterEvaluation) ef.getProvider(crit[i]);
+            }
+        }
 
         Clustering[] mo = new Clustering[ref.length];
+        int numFronts = params.getInt("fronts", 10);
+        ClusterEvaluation sort;
+        for (int i = 0; i < objectives.length; i++) {
+            for (int j = i + 1; j < objectives.length; j++) {
+                for (int k = 0; k < objectives.length; k++) {
+                    List<ClusterEvaluation<E, C>> moObj = new LinkedList<>();
+                    //first MO criteria
+                    moObj.add(objectives[i]);
+                    //second criteria
+                    moObj.add(objectives[j]);
+                    //sort criteria
+                    sort = objectives[k];
 
-        for (ClusterEvaluation[] obj : sets) {
-            List<ClusterEvaluation<E, C>> moObj = new LinkedList<>();
-            moObj.add(obj[0]);
-            moObj.add(obj[1]);
-            ClusterEvaluation sort = obj[2];
-            ParetoFrontQueue<E, C, Clustering<E, C>> q = new ParetoFrontQueue<>(10, moObj, sort);
-            for (Clustering<E, C> c : ref) {
-                q.add(c);
-            }
-            SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
+                    ParetoFrontQueue<E, C, Clustering<E, C>> q = new ParetoFrontQueue<>(numFronts, moObj, sort);
+                    for (Clustering<E, C> c : ref) {
+                        q.add(c);
+                    }
+                    SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
 
-            int i = 0;
-            for (Clustering<E, C> c : ranking.values()) {
-                mo[i] = c;
-                i++;
+                    int l = 0;
+                    for (Clustering<E, C> c : ranking.values()) {
+                        mo[l++] = c;
+                    }
+                    if (ranking.size() != ref.length) {
+                        LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
+                    }
+                    HashMap<Integer, Integer> map = new HashMap<>(ref.length);
+                    double corr = rankCmp.correlation(mo, ref, map);
+                    String moName = moName(q);
+                    LOG.info("{}: {}", moName, corr);
+                    res.put(moName, df.format(corr));
+                }
             }
-            LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
-            HashMap<Integer, Integer> map = new HashMap<>(ref.length);
-            double corr = rankCmp.correlation(mo, ref, map);
-            String moName = moName(q);
-            System.out.println(moName + ": " + corr);
-            res.put(moName, df.format(corr));
         }
     }
 

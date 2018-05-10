@@ -217,9 +217,9 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             StopWatch evalTime;
 
             metaSearch = new MetaSearch<>();
-            String metaParams = cliParams.getMetaParams();
-            LOG.debug("meta-params: {}", metaParams);
-            metaSearch.configure(parseJson(metaParams));
+            Props metaParams = parseJson(cliParams.getMetaParams());
+            LOG.debug("meta-params: {}", metaParams.toString());
+            metaSearch.configure(metaParams);
             metaSearch.setDataset(dataset);
             Callable<ParetoFrontQueue> callable = metaSearch;
 
@@ -245,7 +245,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         //ranking correlation
                         ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
                         res = export.resultsFile(dataset.getName() + "-correlation");
-                        export.correlation(ranking, evals, res, supervised, q);
+                        export.correlation(ranking, evals, res, supervised, q, metaParams);
 
                         //supervised coefficients
                         LOG.info("Computing unsupervised cooeficients");
