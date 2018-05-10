@@ -19,7 +19,6 @@ package org.clueminer.cli;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.gson.JsonSyntaxException;
-import edu.umn.cluto.Cluto;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -719,7 +718,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 shrink += 0.1; //eps increment
             }
             prop.put(CURE.SHRINK_FACTOR, bestShrink);
-        } else if (algorithm instanceof Cluto) {
+        } else if (algorithm.getName().equals("CLUTO")) {
             String[] configs = new String[]{
                 "{crfun=i1,agglofrom=15}",
                 "{crfun=i2}",
