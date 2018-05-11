@@ -214,6 +214,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         Clustering[] mo = new Clustering[ref.length];
         int numFronts = params.getInt("fronts", 10);
         ClusterEvaluation sort;
+        double maxCorr = -1.0;
         for (int i = 0; i < objectives.length; i++) {
             for (int j = i + 1; j < objectives.length; j++) {
                 for (int k = 0; k < objectives.length; k++) {
@@ -237,11 +238,16 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                     }
                     if (ranking.size() != ref.length) {
                         LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
+                        System.out.println(q.toString());
+                        System.out.println(q.stats());
                     }
                     HashMap<Integer, Integer> map = new HashMap<>(ref.length);
                     double corr = rankCmp.correlation(mo, ref, map);
                     String moName = moName(q);
-                    LOG.info("{}: {}", moName, corr);
+                    if (corr > maxCorr) {
+                        maxCorr = corr;
+                        LOG.info("{}: {}", moName, corr);
+                    }
                     res.put(moName, df.format(corr));
                 }
             }

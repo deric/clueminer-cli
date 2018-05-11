@@ -253,7 +253,9 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                         res = export.createNewFile(dataset, "external-" + run);
                         evals = eef.getAllArray();
                         export.ranking(ranking, evals, res);
-                        LOG.info("best template: {}", q.poll().getParams().toJson());
+                        Clustering c = q.poll();
+                        LOG.info("best template: {}", c.getParams().toJson());
+                        LOG.info("best fingerprint: {}", c.fingerprint());
                         evalTime.endMeasure();
                         LOG.info("computing evaluations took: {}s", evalTime.formatSec());
                     } else {
