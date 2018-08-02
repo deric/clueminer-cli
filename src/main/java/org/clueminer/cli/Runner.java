@@ -323,7 +323,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 File f = new File(json.trim());
                 if (f.exists()) {
                     try {
-                        json = Files.toString(f, Charsets.UTF_8);
+                        json = Files.asCharSource(f, Charsets.UTF_8).read();
                     } catch (IOException ex) {
                         Exceptions.printStackTrace(ex);
                     }
