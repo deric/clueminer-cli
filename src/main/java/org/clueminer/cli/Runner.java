@@ -832,7 +832,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         return evals;
     }
 
-    private void saveHeatmap(Params params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
+    private void saveHeatmap(CliParams params, Dataset<? extends Instance> dataset, DendrogramMapping mapping) {
         DgViewer panel = new DgViewer();
         panel.setDataset(mapping);
         //pixels per element in matrix
@@ -871,7 +871,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
     }
 
-    public Params getParams() {
+    public CliParams getParams() {
         return cliParams;
     }
 
