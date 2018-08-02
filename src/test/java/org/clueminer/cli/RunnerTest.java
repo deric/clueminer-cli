@@ -33,7 +33,7 @@ public class RunnerTest<E extends Instance> {
 
     private final CommonFixture cf = new CommonFixture();
     private Runner subject;
-    private final Params p = new Params();
+    private final CliParams p = new CliParams();
 
     public RunnerTest() {
     }

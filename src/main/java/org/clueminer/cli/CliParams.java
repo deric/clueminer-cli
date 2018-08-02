@@ -24,10 +24,11 @@ import org.clueminer.utils.FileUtils;
 import org.openide.util.NbBundle;
 
 /**
+ * Command line arguments
  *
  * @author Tomas Barton
  */
-public class Params {
+public class CliParams {
 
     @Parameter(names = "--dir", description = "directory for results", required = false)
     public String home = System.getProperty("user.home") + File.separatorChar
@@ -110,6 +111,9 @@ public class Params {
 
     @Parameter(names = {"--log", "-l"}, description = "Log level: WARNING, SEVERE, FINE, FINER, FINEST")
     public String logLevel = "info";
+
+    @Parameter(names = {"--exec"}, description = "Executor, default: 'local' or provide cluster URI in order to execute jobs remotely")
+    public String executor = "local";
 
     /**
      * A hack to support passing json containing whitespaces

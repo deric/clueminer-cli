@@ -21,7 +21,12 @@ import com.google.common.io.Files;
 import com.google.gson.JsonSyntaxException;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.SortedMap;
 import java.util.concurrent.Callable;
@@ -32,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import org.clueminer.ap.AffinityPropagation;
 import org.clueminer.chameleon.Chameleon;
 import org.clueminer.clustering.ClusteringExecutorCached;
@@ -85,16 +91,17 @@ import org.slf4j.LoggerFactory;
 public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends Cluster<E>> implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(Runner.class);
-    private final Params cliParams;
+    private final CliParams cliParams;
     private StopWatch time;
     private final ResultsExporter export;
+    private String sha1;
 
-    Runner(Params p) {
+    Runner(CliParams p) {
         this.cliParams = p;
         this.export = new ResultsExporter(this);
     }
 
-    protected Dataset<E> loadData(Params p) throws IOException, ParserError {
+    protected Dataset<E> loadData(CliParams p) throws IOException, ParserError, FileNotFoundException, NoSuchAlgorithmException {
         Dataset<E> dataset;
         if (p.generate != null) {
             DataGenerator<E> gen = new DataGenerator<>();
@@ -119,6 +126,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         if (!f.exists() || !f.canRead()) {
             throw new InvalidArgumentException("can't read from file " + p.data);
         }
+        sha1 = computeSha1(f);
+        LOG.info("file: {}, SHA-1: {}", p.data, sha1);
 
         int clsIndex = p.clsIndex;
         ArrayList<Integer> skip = new ArrayList<>(1);
@@ -191,7 +200,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         Dataset<E> dataset = null;
         try {
             dataset = (Dataset<E>) loadData(cliParams);
-        } catch (IOException | ParserError ex) {
+        } catch (IOException | ParserError | NoSuchAlgorithmException ex) {
             Exceptions.printStackTrace(ex);
         }
         if (dataset == null || dataset.isEmpty()) {
@@ -757,45 +766,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 export.evaluate(curr, evals, dataset);
             }
             LOG.info("best configuration: {}", bestConf);
-        } else if (algorithm instanceof AffinityPropagation) {
-            /**
-             * TODO: a heuristic to determine preference
-             */
-            String[] configs = new String[]{
-                "{damping=0.5}",
-                "{damping=0.55}",
-                "{damping=0.6}",
-                "{damping=0.65}",
-                "{damping=0.7}",
-                "{damping=0.75}",
-                "{damping=0.8}",
-                "{damping=0.85}",
-                "{damping=0.9}",
-                "{damping=0.95}"
-            };
-            Props conf;
-            double maxScore = 0.0, score;
-            String bestConf = "";
-            for (String config : configs) {
-                conf = prop.copy();
-                conf.merge(Props.fromJson(config));
-                curr = cluster(dataset, conf, algorithm);
-                try {
-                    score = eval.score(curr, conf);
-                } catch (ScoreException ex) {
-                    score = Double.NaN;
-                    LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
-                }
-                if (eval.isBetter(score, maxScore)) {
-                    maxScore = score;
-                    clustering = curr;
-                    bestConf = config;
-                }
-                cnt++;
-                export.evaluate(curr, evals, dataset);
-            }
-            LOG.info("best configuration: {}", bestConf);
-        } else {
+        } else if (algorithm instanceof AffinityPropagation)  else {
             clustering = cluster(dataset, prop, algorithm);
         }
         LOG.info("{}: evaluated {} clusterings", new Object[]{algorithm.getName(), cnt});
@@ -864,6 +835,35 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
     public Params getParams() {
         return cliParams;
+    }
+
+    /**
+     * Read the file and calculate the SHA-1 checksum
+     *
+     * @param file the file to read
+     * @return the hex representation of the SHA-1 using uppercase chars
+     * @throws FileNotFoundException if the file does not exist, is a directory
+     * rather than a regular file, or for some other reason cannot be opened for
+     * reading
+     * @throws IOException if an I/O error occurs
+     * @throws NoSuchAlgorithmException should never happen
+     */
+    private static String computeSha1(File file) throws FileNotFoundException,
+            IOException, NoSuchAlgorithmException {
+
+        MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+        try (InputStream input = new FileInputStream(file)) {
+
+            byte[] buffer = new byte[8192];
+            int len = input.read(buffer);
+
+            while (len != -1) {
+                sha1.update(buffer, 0, len);
+                len = input.read(buffer);
+            }
+
+            return new HexBinaryAdapter().marshal(sha1.digest());
+        }
     }
 
 }

@@ -41,7 +41,7 @@ public class FileUtil {
      * @param params
      * @return
      */
-    public static String ensureDir(String name, Params params) {
+    public static String ensureDir(String name, CliParams params) {
         if (name == null || name.isEmpty()) {
             RandomString rand = new RandomString(8);
             name = rand.nextString();

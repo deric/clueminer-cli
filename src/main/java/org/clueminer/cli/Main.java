@@ -31,20 +31,20 @@ public class Main {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        Params p = parseArguments(args);
+        CliParams p = parseArguments(args);
         ClmLog.setup(p.logLevel);
         Runner runner = new Runner(p);
         runner.run();
     }
 
-    protected static Params parseArguments(String[] args) {
-        Params params = new Params();
+    protected static CliParams parseArguments(String[] args) {
+        CliParams params = new CliParams();
         JCommander cmd = new JCommander(params);
         printUsage(args, cmd, params);
         return params;
     }
 
-    public static void printUsage(String[] args, JCommander cmd, Params params) {
+    public static void printUsage(String[] args, JCommander cmd, CliParams params) {
         if (args.length == 0) {
             StringBuilder sb = new StringBuilder();
             cmd.usage(sb);
