@@ -75,6 +75,7 @@ import org.clueminer.plot.GnuplotLinePlot;
 import org.clueminer.plot.GnuplotScatter;
 import org.clueminer.utils.DataFileInfo;
 import org.clueminer.utils.DatasetSniffer;
+import org.clueminer.utils.PropType;
 import org.clueminer.utils.Props;
 import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
@@ -283,6 +284,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
         Props prop = parseJson(cliParams.getParams());
         LOG.info("params: {}", prop.toString());
+        prop.put(PropType.RUNTIME, "sha1", sha1);
 
         String alg = prop.get("algorithm", cliParams.algorithm);
         ClusteringAlgorithm algorithm = parseAlgorithm(alg);
