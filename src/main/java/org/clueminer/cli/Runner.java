@@ -766,7 +766,45 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                 export.evaluate(curr, evals, dataset);
             }
             LOG.info("best configuration: {}", bestConf);
-        } else if (algorithm instanceof AffinityPropagation)  else {
+        } else if (algorithm instanceof AffinityPropagation) {
+            /**
+             * TODO: a heuristic to determine preference
+             */
+            String[] configs = new String[]{
+                "{damping=0.5}",
+                "{damping=0.55}",
+                "{damping=0.6}",
+                "{damping=0.65}",
+                "{damping=0.7}",
+                "{damping=0.75}",
+                "{damping=0.8}",
+                "{damping=0.85}",
+                "{damping=0.9}",
+                "{damping=0.95}"
+            };
+            Props conf;
+            double maxScore = 0.0, score;
+            String bestConf = "";
+            for (String config : configs) {
+                conf = prop.copy();
+                conf.merge(Props.fromJson(config));
+                curr = cluster(dataset, conf, algorithm);
+                try {
+                    score = eval.score(curr, conf);
+                } catch (ScoreException ex) {
+                    score = Double.NaN;
+                    LOG.warn("failed to compute score {}: {}", new Object[]{eval.getName(), ex.getMessage()});
+                }
+                if (eval.isBetter(score, maxScore)) {
+                    maxScore = score;
+                    clustering = curr;
+                    bestConf = config;
+                }
+                cnt++;
+                export.evaluate(curr, evals, dataset);
+            }
+            LOG.info("best configuration: {}", bestConf);
+        } else {
             clustering = cluster(dataset, prop, algorithm);
         }
         LOG.info("{}: evaluated {} clusterings", new Object[]{algorithm.getName(), cnt});
