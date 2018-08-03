@@ -41,6 +41,7 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import org.clueminer.ap.AffinityPropagation;
 import org.clueminer.chameleon.Chameleon;
 import org.clueminer.clustering.ClusteringExecutorCached;
+import org.clueminer.clustering.MesosExecutor;
 import org.clueminer.clustering.algorithm.DBSCAN;
 import org.clueminer.clustering.algorithm.DBSCANParamEstim;
 import org.clueminer.clustering.algorithm.KMeans;
@@ -52,6 +53,7 @@ import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.ClusteringAlgorithm;
 import org.clueminer.clustering.api.ClusteringFactory;
+import org.clueminer.clustering.api.Executor;
 import org.clueminer.clustering.api.HierarchicalResult;
 import org.clueminer.clustering.api.ScoreException;
 import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
@@ -298,11 +300,18 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         if (cliParams.hintK) {
             prop.putInt(KMeans.K, dataset.getClasses().size());
         }
+        Executor exec;
+        if ("local".equals(cliParams.executor)) {
+            exec = new ClusteringExecutorCached();
+        } else {
+            exec = new MesosExecutor(cliParams.executor);
+        }
+
         time = new StopWatch(false);
         for (int run = 0; run < cliParams.repeat; run++) {
             LOG.debug("executing {}", prop.toJson());
             if (algorithm instanceof AgglomerativeClustering) {
-                prop = hierachical(dataset, prop, algorithm, evals, run);
+                prop = hierachical(exec, dataset, prop, algorithm, evals, run);
             } else {
                 prop = flatPartitioning(dataset, prop, algorithm, evals, run);
             }
@@ -352,10 +361,9 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         return clustering;
     }
 
-    private Props hierachical(Dataset<E> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
+    private Props hierachical(Executor exec, Dataset<E> dataset, Props prop, ClusteringAlgorithm algorithm, ClusterEvaluation[] evals, int run) {
         Clustering clustering;
         //hierarchical result
-        ClusteringExecutorCached exec = new ClusteringExecutorCached();
         exec.setAlgorithm(algorithm);
         HierarchicalResult res;
 
@@ -406,7 +414,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
      * @param prop
      * @return
      */
-    private HierarchicalResult stdHierarchical(ClusteringExecutorCached exec, Dataset<E> dataset, Props prop) {
+    private HierarchicalResult stdHierarchical(Executor exec, Dataset<E> dataset, Props prop) {
         HierarchicalResult res = null;
         DendrogramMapping mapping;
         Clustering clustering;
@@ -436,7 +444,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         return res;
     }
 
-    private HierarchicalResult optHierarchical(ClusteringExecutorCached exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
+    private HierarchicalResult optHierarchical(Executor exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
         if (exec.getAlgorithm() instanceof Chameleon) {
             //test several configurations and return best result
             String[] configs;
@@ -565,7 +573,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
     }
 
-    private HierarchicalResult findBestHclust(String[] configs, ClusteringExecutorCached exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
+    private HierarchicalResult findBestHclust(String[] configs, Executor exec, Dataset<E> dataset, Props def, ClusterEvaluation[] evals) {
         double maxScore = 0.0, score;
         Props prop;
         ClusterEvaluation eval = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
