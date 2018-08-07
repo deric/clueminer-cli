@@ -285,7 +285,9 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
 
         Props prop = parseJson(cliParams.getParams());
-        LOG.info("params: {}", prop.toString());
+        if (prop.size() > 0) {
+            LOG.info("params: {}", prop.toString());
+        }
         prop.put(PropType.RUNTIME, "sha1", sha1);
 
         String alg = prop.get("algorithm", cliParams.algorithm);
