@@ -200,6 +200,10 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
     @Override
     public void run() {
+        if (cliParams.syncDB) {
+            syncDB();
+            return;
+        }
         Dataset<E> dataset = null;
         try {
             dataset = (Dataset<E>) loadData(cliParams);
@@ -914,6 +918,14 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
             return new HexBinaryAdapter().marshal(sha1.digest());
         }
+    }
+
+    private void syncDB() {
+        if ("local".equals(cliParams.executor)) {
+            System.err.println("Please provide --exec URI for connection");
+            System.exit(1);
+        }
+
     }
 
 }

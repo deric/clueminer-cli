@@ -106,7 +106,7 @@ public class CliParams {
     @Parameter(names = {"--method", "-mth"}, description = "a named method (with predefined configuration)")
     public String method = "";
 
-    @Parameter(names = {"--meta-search", "-mts"}, description = "tris to find optimal algorithm for given data")
+    @Parameter(names = {"--meta-search", "-mts"}, description = "Tries to find optimal algorithm for given data")
     public boolean metaSearch = false;
 
     @Parameter(names = {"--log", "-l"}, description = "Log level: WARNING, SEVERE, FINE, FINER, FINEST")
@@ -114,6 +114,9 @@ public class CliParams {
 
     @Parameter(names = {"--exec"}, description = "Executor, default: 'local' or provide cluster URI in order to execute jobs remotely")
     public String executor = "local";
+
+    @Parameter(names = {"--sync-db"}, description = "Synchronize meta-db tables with Clueminer definitions. Works only with Mesos executor.")
+    public boolean syncDB = false;
 
     /**
      * A hack to support passing json containing whitespaces
