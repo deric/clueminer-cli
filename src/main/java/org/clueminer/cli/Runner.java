@@ -926,6 +926,8 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             System.exit(1);
         }
 
+        MesosExecutor exec = new MesosExecutor(cliParams.executor);
+        exec.syncDB();
     }
 
 }
