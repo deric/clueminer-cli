@@ -238,7 +238,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                     }
                     if (ranking.size() != ref.length) {
                         LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
-                        System.out.println(q.toString());
+                        //System.out.println(q.toString());
                         System.out.println(q.stats());
                     }
                     HashMap<Integer, Integer> map = new HashMap<>(ref.length);
