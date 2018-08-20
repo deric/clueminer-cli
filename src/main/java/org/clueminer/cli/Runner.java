@@ -279,6 +279,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
                     }
                 } catch (InterruptedException | ExecutionException ex) {
                     Exceptions.printStackTrace(ex);
+                    System.exit(1);
                 }
             }
             export.writeMeta(metaSearch.getMeta(), dataset);
