@@ -35,16 +35,10 @@ import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.EvaluationTable;
 import org.clueminer.clustering.api.Rank;
-import org.clueminer.clustering.api.factory.EvaluationFactory;
 import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
 import org.clueminer.io.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
-import org.clueminer.eval.BIC;
-import org.clueminer.eval.CalinskiHarabasz;
-import org.clueminer.eval.McClainRao;
-import org.clueminer.eval.PointBiserialNorm;
-import org.clueminer.eval.RatkowskyLance;
 import org.clueminer.eval.utils.ClusteringComparator;
 import org.clueminer.evolution.api.Individual;
 import org.clueminer.meta.ranking.ParetoFrontQueue;
@@ -168,7 +162,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
          * } */
         double corr = rankCmp.correlation(mo, ref, map);
         String moName = moName(q);
-        System.out.println(moName + ": " + corr);
+        LOG.info("{}: {}", moName, corr);
 
         Map<String, String> res = new TreeMap<>();
         res.put(moName, df.format(corr));
@@ -239,7 +233,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                     if (ranking.size() != ref.length) {
                         LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
                         //System.out.println(q.toString());
-                        System.out.println(q.stats());
+                        LOG.info(q.stats());
                     }
                     HashMap<Integer, Integer> map = new HashMap<>(ref.length);
                     double corr = rankCmp.correlation(mo, ref, map);
@@ -256,9 +250,9 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
 
     private String moName(ParetoFrontQueue<E, C, Clustering<E, C>> q) {
         StringBuilder sb = new StringBuilder();
-        for (ClusterEvaluation ev : q.getObjectives()) {
+        q.getObjectives().forEach((ev) -> {
             sb.append(ev.getName()).append(" & ");
-        }
+        });
         sb.append(q.getSortingObjectives().getName());
         return sb.toString();
     }
