@@ -207,7 +207,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         }
 
         Clustering[] mo = new Clustering[ref.length];
-        int numFronts = params.getInt("fronts", 10);
+        int numFronts = params.getInt("fronts", 20);
         ClusterEvaluation sort;
         double maxCorr = -1.0;
         for (int i = 0; i < objectives.length; i++) {
@@ -220,11 +220,13 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                     moObj.add(objectives[j]);
                     //sort criteria
                     sort = objectives[k];
-
+                    LOG.trace("{} & {} & {}, num fronts: {}", objectives[i].getName(),
+                            objectives[j].getName(), objectives[k].getName(), numFronts);
                     ParetoFrontQueue<E, C, Clustering<E, C>> q = new ParetoFrontQueue<>(numFronts, moObj, sort);
                     for (Clustering<E, C> c : ref) {
                         q.add(c);
                     }
+                    LOG.trace("excluded clusterings: {}", q.getExcludedSize());
                     SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
 
                     int l = 0;
@@ -232,16 +234,15 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                         mo[l++] = c;
                     }
                     if (ranking.size() != ref.length) {
-                        LOG.debug("ranking size: {} vs reference: {}", ranking.size(), ref.length);
-                        //System.out.println(q.toString());
-                        LOG.info(q.stats());
+                        LOG.warn("ranking size: {} vs reference: {}", ranking.size(), ref.length);
                     }
                     HashMap<Integer, Integer> map = new HashMap<>(ref.length);
                     double corr = rankCmp.correlation(mo, ref, map);
                     String moName = moName(q);
+                    LOG.info("{}: {}", moName, corr);
                     if (corr > maxCorr) {
                         maxCorr = corr;
-                        LOG.info("{}: {}", moName, corr);
+                        LOG.info("best result so far: {}: {}", moName, corr);
                     }
                     res.put(moName, df.format(corr));
                 }
