@@ -42,6 +42,7 @@ import org.clueminer.dataset.api.Instance;
 import org.clueminer.eval.utils.ClusteringComparator;
 import org.clueminer.evolution.api.Individual;
 import org.clueminer.meta.ranking.ParetoFrontQueue;
+import org.clueminer.rank.Correlation;
 import org.clueminer.rank.Spearman;
 import org.clueminer.utils.PropType;
 import org.clueminer.utils.Props;
@@ -138,7 +139,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      * @param params
      */
     public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q, Props params) {
-        Rank rankCmp = new Spearman();
+        Rank rankCmp = new Correlation();
         HashMap<Integer, Integer> map = new HashMap<>(ranking.size());
         ClusteringComparator comp = new ClusteringComparator(supervised);
         Clustering[] mo = new Clustering[ranking.size()];
