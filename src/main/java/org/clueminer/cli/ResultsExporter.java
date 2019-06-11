@@ -34,7 +34,6 @@ import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.EvaluationTable;
-import org.clueminer.clustering.api.Rank;
 import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
 import org.clueminer.io.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
@@ -49,6 +48,7 @@ import org.clueminer.utils.StopWatch;
 import org.openide.util.Exceptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.clueminer.clustering.api.RankEvaluator;
 
 /**
  * Write results into CSV files.
@@ -138,7 +138,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      * @param params
      */
     public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q, Props params) {
-        Rank rankCmp = new Spearman();
+        RankEvaluator rankCmp = new Spearman();
         HashMap<Integer, Integer> map = new HashMap<>(ranking.size());
         ClusteringComparator comp = new ClusteringComparator(supervised);
         Clustering[] mo = new Clustering[ranking.size()];
@@ -190,7 +190,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      * @param rankCmp
      * @param params
      */
-    private void evaluateMOrank(Map<String, String> res, Clustering[] ref, Rank rankCmp, Props params) {
+    private void evaluateMOrank(Map<String, String> res, Clustering[] ref, RankEvaluator rankCmp, Props params) {
         InternalEvaluatorFactory ef = InternalEvaluatorFactory.getInstance();
         ClusterEvaluation[] objectives;
         //e.g. "BIC,PointBiserial-Norm,Ratkowsky-Lance"
