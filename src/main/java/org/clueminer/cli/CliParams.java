@@ -109,6 +109,9 @@ public class CliParams {
     @Parameter(names = {"--meta-search", "-mts"}, description = "Tries to find optimal algorithm for given data")
     public boolean metaSearch = false;
 
+    @Parameter(names = {"--bac"}, description = "Brute force state space exploration algorithm")
+    public String bac = null;
+
     @Parameter(names = {"--log", "-l"}, description = "Log level: WARNING, SEVERE, FINE, FINER, FINEST")
     public String logLevel = "info";
 

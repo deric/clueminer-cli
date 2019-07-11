@@ -199,6 +199,11 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>clustering-evolution</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>meta-api</artifactId>
             <version>${project.version}</version>
         </dependency>

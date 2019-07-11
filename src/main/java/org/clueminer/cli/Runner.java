@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 clueminer.org
+ * Copyright (C) 2011-2019 clueminer.org
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,12 +28,9 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.SortedMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
@@ -65,12 +62,19 @@ import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
+import org.clueminer.evolution.api.Evolution;
+import org.clueminer.evolution.api.EvolutionFactory;
+import org.clueminer.evolution.api.EvolutionListener;
 import org.clueminer.evolution.api.Individual;
+import org.clueminer.evolution.api.Pair;
+import org.clueminer.evolution.api.Population;
+import org.clueminer.evolution.hac.BruteForceHacEvolution;
 import org.clueminer.exception.ParserError;
 import org.clueminer.io.DataSniffer;
 import org.clueminer.io.FileHandler;
 import org.clueminer.io.arff.ARFFHandler;
 import org.clueminer.io.csv.CsvLoader;
+import org.clueminer.meta.engine.AbsMetaExp;
 import org.clueminer.meta.engine.MetaSearch;
 import org.clueminer.meta.ranking.ParetoFrontQueue;
 import org.clueminer.plot.GnuplotLinePlot;
@@ -227,8 +231,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             } else {
                 cliParams.experiment = cliParams.experiment + File.separatorChar + safeName(dataset.getName());
             }
-            ExecutorService pool = Executors.newFixedThreadPool(cliParams.repeat);
-            Future<ParetoFrontQueue> future;
             MetaSearch<I, E, C> metaSearch;
             StopWatch evalTime;
 
@@ -237,54 +239,131 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             LOG.debug("meta-params: {}", metaParams.toString());
             metaSearch.configure(metaParams);
             metaSearch.setDataset(dataset);
-            Callable<ParetoFrontQueue> callable = metaSearch;
 
             for (int run = 0; run < cliParams.repeat; run++) {
                 LOG.info("RUN {}", run);
-                future = pool.submit(callable);
+
                 try {
-                    if (future != null) {
-                        evalTime = new StopWatch(true);
-                        ParetoFrontQueue<E, C, Clustering<E, C>> q = future.get();
-                        SortedMap<Double, Clustering<E, C>> ranking = q.computeRanking();
-                        if (evals != null) {
-                            export.exportFront(ranking, evals, export.resultsFile("pareto-front-" + run));
-                        }
+                    List<Clustering<E, C>> list = metaSearch.call();
 
-                        //internal evaluation
-                        InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
-                        File res = export.createNewFile(dataset, "internal-" + run);
-                        evals = ief.getAllArray();
-                        export.ranking(ranking, evals, res);
-
-                        LOG.info("Computing correlation to {}", cliParams.optEval);
-                        //ranking correlation
-                        ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
-                        res = export.resultsFile(dataset.getName() + "-correlation");
-                        export.correlation(ranking, evals, res, supervised, q, metaParams);
-
-                        //supervised coefficients
-                        LOG.info("Computing unsupervised cooeficients");
-                        ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
-                        res = export.createNewFile(dataset, "external-" + run);
-                        evals = eef.getAllArray();
-                        export.ranking(ranking, evals, res);
-                        Clustering c = q.poll();
-                        LOG.info("best template: {}", c.getParams().toJson());
-                        LOG.info("best fingerprint: {}", c.fingerprint());
-                        evalTime.endMeasure();
-                        LOG.info("computing evaluations took: {}s", evalTime.formatSec());
-                    } else {
-                        throw new RuntimeException("there's no future in here");
+                    evalTime = new StopWatch(true);
+                    SortedMap<Double, Clustering<E, C>> ranking = metaSearch.computeRanking();
+                    if (evals != null) {
+                        export.exportFront(ranking, evals, export.resultsFile("pareto-front-" + run));
                     }
+
+                    //internal evaluation
+                    InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
+                    File res = export.createNewFile(dataset, "internal-" + run);
+                    evals = ief.getAllArray();
+                    export.ranking(ranking, evals, res);
+
+                    LOG.info("Computing correlation to {}", cliParams.optEval);
+                    //ranking correlation
+                    ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
+                    res = export.resultsFile(dataset.getName() + "-correlation");
+                    export.correlation(ranking, evals, res, supervised, rankingName(metaSearch), metaParams);
+
+                    //supervised coefficients
+                    LOG.info("Computing unsupervised cooeficients");
+                    ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
+                    res = export.createNewFile(dataset, "external-" + run);
+                    evals = eef.getAllArray();
+                    export.ranking(ranking, evals, res);
+                    //TODO: make sure list is sorted in ascending order
+                    Clustering c = list.get(0);
+                    LOG.info("best template: {}", c.getParams().toJson());
+                    LOG.info("best fingerprint: {}", c.fingerprint());
+                    evalTime.endMeasure();
+                    LOG.info("computing evaluations took: {}s", evalTime.formatSec());
+
                 } catch (InterruptedException | ExecutionException ex) {
                     Exceptions.printStackTrace(ex);
                     System.exit(1);
+                } catch (Exception ex) {
+                    Exceptions.printStackTrace(ex);
                 }
             }
             export.writeMeta(metaSearch.getMeta(), dataset);
 
-            pool.shutdown();
+            //System.exit(0);
+            return;
+        }
+
+        if (cliParams.bac != null) {
+            if (cliParams.experiment == null) {
+                cliParams.experiment = "bac" + File.separatorChar + safeName(dataset.getName());
+            } else {
+                cliParams.experiment = cliParams.experiment + File.separatorChar + safeName(dataset.getName());
+            }
+            EvolutionFactory ef = EvolutionFactory.getInstance();
+            Evolution<I, E, C> evo = ef.getProvider(cliParams.bac);
+            StopWatch evalTime;
+
+            AbsMetaExp search = (AbsMetaExp) evo;
+            Props metaParams = parseJson(cliParams.getMetaParams());
+            LOG.debug("meta-params: {}", metaParams.toString());
+            search.setDataset(dataset);
+
+            search.addEvolutionListener(new EvolutionListener() {
+                @Override
+                public void started(Evolution evolution) {
+                    //
+                }
+
+                @Override
+                public void resultUpdate(Individual[] result, boolean isExplicit) {
+                    //
+                }
+
+                @Override
+                public void bestInGeneration(int generationNum, Population<? extends Individual> population, double external) {
+                    //
+                }
+
+                @Override
+                public void finalResult(Evolution evolution, int g, Individual best, Pair<Long, Long> time, Pair<Double, Double> bestFitness, Pair<Double, Double> avgFitness, double external) {
+                    //
+                }
+            });
+
+            for (int run = 0; run < cliParams.repeat; run++) {
+                try {
+                    LOG.info("RUN {}", run);
+                    evalTime = new StopWatch(true);
+
+                    List<Clustering<E, C>> list = search.call();
+                    SortedMap<Double, Clustering<E, C>> ranking = search.computeRanking();
+                    if (evals != null) {
+                        export.exportFront(ranking, evals, export.resultsFile("pareto-front-" + run));
+                    }
+                    //internal evaluation
+                    InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
+                    File res = export.createNewFile(dataset, "internal-" + run);
+                    evals = ief.getAllArray();
+                    export.ranking(ranking, evals, res);
+                    LOG.info("Computing correlation to {}", cliParams.optEval);
+                    //ranking correlation
+                    ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
+                    res = export.resultsFile(dataset.getName() + "-correlation");
+                    export.correlation(ranking, evals, res, supervised, rankingName(search), metaParams);
+                    //supervised coefficients
+                    LOG.info("Computing unsupervised cooeficients");
+                    ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
+                    res = export.createNewFile(dataset, "external-" + run);
+                    evals = eef.getAllArray();
+                    export.ranking(ranking, evals, res);
+                    Clustering c = list.get(0);
+                    LOG.info("best template: {}", c.getParams().toJson());
+                    LOG.info("best fingerprint: {}", c.fingerprint());
+                    evalTime.endMeasure();
+                    LOG.info("computing evaluations took: {}s", evalTime.formatSec());
+                } //export.writeMeta(search.getMeta(), dataset);
+                catch (Exception ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            }
+
             //System.exit(0);
             return;
         }
@@ -328,6 +407,12 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         }
     }
 
+    private String rankingName(Evolution evo) {
+        StringBuilder sb = new StringBuilder();
+        //TODO append config
+        sb.append(evo.getName());
+        return sb.toString();
+    }
     /**
      * Parse either JSON string or load JSON from a file (path to a file)
      *

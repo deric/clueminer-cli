@@ -39,3 +39,8 @@ chameleon:
 ```
  ./run -d ~/_bench/artificial/aggregation.arff -t arff -a Chameleon --cluster rows -p "{k-estim:cln2,cutoff-strategy:External_cutoff}" -e "NMI-sqrt"
 ```
+
+heatmap:
+
+./run -d data.arff -t arff -a HC-LW --heatmap --width 550 --cluster both
+

@@ -135,10 +135,10 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      * @param evals
      * @param results
      * @param supervised reference sorting
-     * @param q Pareto queue
+     * @param methodName
      * @param params
      */
-    public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, ParetoFrontQueue<E, C, Clustering<E, C>> q, Props params) {
+    public void correlation(SortedMap<Double, Clustering<E, C>> ranking, ClusterEvaluation[] evals, File results, ClusterEvaluation supervised, String methodName, Props params) {
         RankEvaluator rankCmp = new Correlation();
         HashMap<Integer, Integer> map = new HashMap<>(ranking.size());
         ClusteringComparator comp = new ClusteringComparator(supervised);
@@ -162,11 +162,10 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
          * //Clustering clustering = ref[j];
          * } */
         double corr = rankCmp.correlation(mo, ref, map);
-        String moName = moName(q);
-        LOG.info("{}: {}", moName, corr);
+        LOG.info("{}: {}", methodName, corr);
 
         Map<String, String> res = new TreeMap<>();
-        res.put(moName, df.format(corr));
+        res.put(methodName, df.format(corr));
 
         for (ClusterEvaluation e : evals) {
             comp.setEvaluator(e);
