@@ -25,7 +25,7 @@ import org.openide.util.NbBundle;
 
 /**
  * Command line arguments
- *
+ * *
  * @author Tomas Barton
  */
 public class CliParams {
@@ -103,14 +103,14 @@ public class CliParams {
     @Parameter(names = {"--opt-eval", "-oe"}, description = "metric for choosing optimal clustring (internal or external)")
     public String optEval = "NMI-sqrt";
 
-    @Parameter(names = {"--method", "-mth"}, description = "a named method (with predefined configuration)")
+    @Parameter(names = {"--method", "-m th"}, description = "a named method (with predefined configuration)")
     public String method = "";
 
     @Parameter(names = {"--meta-search", "-mts"}, description = "Tries to find optimal algorithm for given data")
     public boolean metaSearch = false;
 
-    @Parameter(names = {"--bac"}, description = "Brute force state space exploration algorithm")
-    public String bac = null;
+    @Parameter(names = {"--se"}, description = "State-space exploration algorithm")
+    public String se = null;
 
     @Parameter(names = {"--log", "-l"}, description = "Log level: WARNING, SEVERE, FINE, FINER, FINEST")
     public String logLevel = "info";

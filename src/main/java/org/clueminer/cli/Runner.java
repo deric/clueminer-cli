@@ -57,6 +57,7 @@ import org.clueminer.clustering.api.dendrogram.DendrogramMapping;
 import org.clueminer.clustering.api.factory.EvaluationFactory;
 import org.clueminer.clustering.api.factory.ExternalEvaluatorFactory;
 import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
+import org.clueminer.clustering.api.factory.RankFactory;
 import org.clueminer.clustering.struct.DendrogramData;
 import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
@@ -290,14 +291,14 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             return;
         }
 
-        if (cliParams.bac != null) {
+        if (cliParams.se != null) {
             if (cliParams.experiment == null) {
-                cliParams.experiment = "bac" + File.separatorChar + safeName(dataset.getName());
+                cliParams.experiment = "se" + File.separatorChar + safeName(dataset.getName());
             } else {
                 cliParams.experiment = cliParams.experiment + File.separatorChar + safeName(dataset.getName());
             }
             EvolutionFactory ef = EvolutionFactory.getInstance();
-            Evolution<I, E, C> evo = ef.getProvider(cliParams.bac);
+            Evolution<I, E, C> evo = ef.getProvider(cliParams.se);
             StopWatch evalTime;
 
             AbsMetaExp search = (AbsMetaExp) evo;
@@ -305,54 +306,23 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             LOG.debug("meta-params: {}", metaParams.toString());
             search.setDataset(dataset);
 
-            search.addEvolutionListener(new EvolutionListener() {
-                @Override
-                public void started(Evolution evolution) {
-                    //
-                }
-
-                @Override
-                public void resultUpdate(Individual[] result, boolean isExplicit) {
-                    //
-                }
-
-                @Override
-                public void bestInGeneration(int generationNum, Population<? extends Individual> population, double external) {
-                    //
-                }
-
-                @Override
-                public void finalResult(Evolution evolution, int g, Individual best, Pair<Long, Long> time, Pair<Double, Double> bestFitness, Pair<Double, Double> avgFitness, double external) {
-                    //
-                }
-            });
-
             for (int run = 0; run < cliParams.repeat; run++) {
                 try {
                     LOG.info("RUN {}", run);
                     evalTime = new StopWatch(true);
 
                     List<Clustering<E, C>> list = search.call();
-                    SortedMap<Double, Clustering<E, C>> ranking = search.computeRanking();
-                    if (evals != null) {
-                        export.exportFront(ranking, evals, export.resultsFile("pareto-front-" + run));
-                    }
-                    //internal evaluation
-                    InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
-                    File res = export.createNewFile(dataset, "internal-" + run);
-                    evals = ief.getAllArray();
-                    export.ranking(ranking, evals, res);
-                    LOG.info("Computing correlation to {}", cliParams.optEval);
+                    LOG.info("found {} clusterings", list.size());
+
+                    File res = export.createNewFile(dataset, "rankings-" + run);
                     //ranking correlation
+                    LOG.info("Computing correlation to {}", cliParams.optEval);
                     ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
-                    res = export.resultsFile(dataset.getName() + "-correlation");
-                    export.correlation(ranking, evals, res, supervised, rankingName(search), metaParams);
-                    //supervised coefficients
-                    LOG.info("Computing unsupervised cooeficients");
-                    ExternalEvaluatorFactory eef = ExternalEvaluatorFactory.getInstance();
-                    res = export.createNewFile(dataset, "external-" + run);
-                    evals = eef.getAllArray();
-                    export.ranking(ranking, evals, res);
+                    export.evaluateRankings(list, res, supervised);
+
+                    File clusts = export.createNewFile(dataset, "clusterings-" + run);
+                    export.clusterings(list, clusts);
+
                     Clustering c = list.get(0);
                     LOG.info("best template: {}", c.getParams().toJson());
                     LOG.info("best fingerprint: {}", c.fingerprint());
@@ -413,6 +383,7 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
         sb.append(evo.getName());
         return sb.toString();
     }
+
     /**
      * Parse either JSON string or load JSON from a file (path to a file)
      *

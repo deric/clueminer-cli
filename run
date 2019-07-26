@@ -3,16 +3,17 @@ ARGS="$@"
 MAIN="org.clueminer.cli.Main"
 jarfile="$(ls -t target/*jar-with-dependencies.jar | head -1)"
 JAVA_XMX="${JAVA_XMX:-4096m}"
+#NETLIB=" -Dcom.github.fommil.netlib.ARPACK=com.github.fommil.netlib.F2jARPACK -Dcom.github.fommil.netlib.LAPACK=com.github.fommil.netlib.F2jLAPACK -Dcom.github.fommil.netlib.BLAS=com.github.fommil.netlib.F2jBLAS"
 if [[ -f "$jarfile" ]]; then
   echo "using max heap: $JAVA_XMX"
-  java -Xmx$JAVA_XMX -jar $jarfile $ARGS
+  java $NETLIB -Xmx$JAVA_XMX -jar $jarfile $ARGS
 else
   path="target/lib"
   echo "using max heap: $JAVA_XMX"
   if [[ -d $path ]]; then
     CLASSPATH=$(find "." -name '*.jar' | xargs echo | tr ' ' ':')
-    java -Xmx$JAVA_XMX -cp $CLASSPATH $MAIN $ARGS
+    java $NETLIB -Xmx$JAVA_XMX -cp $CLASSPATH $MAIN $ARGS
   else
-    mvn "-Dexec.args=-classpath %classpath $MAIN $ARGS" -Dexec.executable=java -Dexec.classpathScope=runtime org.codehaus.mojo:exec-maven-plugin:1.2.1:exec
+    mvn "$NETLIB -Dexec.args=-classpath %classpath $MAIN $ARGS" -Dexec.executable=java -Dexec.classpathScope=runtime org.codehaus.mojo:exec-maven-plugin:1.2.1:exec
   fi
 fi

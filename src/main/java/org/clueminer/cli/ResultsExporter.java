@@ -34,6 +34,8 @@ import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
 import org.clueminer.clustering.api.Clustering;
 import org.clueminer.clustering.api.EvaluationTable;
+import org.clueminer.clustering.api.InternalEvaluator;
+import org.clueminer.clustering.api.Rank;
 import org.clueminer.clustering.api.factory.InternalEvaluatorFactory;
 import org.clueminer.io.csv.CSVWriter;
 import org.clueminer.dataset.api.Dataset;
@@ -50,6 +52,7 @@ import org.openide.util.Exceptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.clueminer.clustering.api.RankEvaluator;
+import org.clueminer.clustering.api.factory.RankFactory;
 
 /**
  * Write results into CSV files.
@@ -126,6 +129,148 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
 
             evaluate(clustering, evals, results, meta);
         }
+    }
+
+    /**
+     * Evaluates different ranking approaches
+     *
+     * @param list
+     * @param results
+     * @param supervised
+     */
+    public void evaluateRankings(List<Clustering<E, C>> list, File results, ClusterEvaluation supervised) {
+        RankFactory rf = RankFactory.getInstance();
+        RankEvaluator rankCmp = new Correlation();
+        HashMap<Integer, Integer> map = new HashMap<>(list.size());
+        //internal evaluation
+        InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
+
+        ClusteringComparator comp = new ClusteringComparator(supervised);
+        Clustering[] clusts = new Clustering[list.size()];
+        Clustering[] ref = new Clustering[list.size()];
+        int i = 0;
+        for (Clustering<E, C> c : list) {
+            clusts[i] = c;
+            ref[i] = c;
+            i++;
+        }
+        Arrays.sort(ref, comp);
+        ClusterEvaluation[] evals = ief.getAllArray();
+        List<ClusterEvaluation<E, C>> obj = new LinkedList<>();
+
+        for (Rank rank : rf.getAllArray()) {
+            LOG.info("ranking using {}", rank.getName());
+            obj.clear();
+            obj.add(evals[0]);
+            switch (rank.getMinObjectives()) {
+                case 1:
+                    for (i = 0; i < evals.length; i++) {
+                        obj.set(0, evals[i]);
+                        evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, supervised);
+                    }
+                    break;
+                case 2:
+                    obj.add(evals[0]);
+                    for (i = 0; i < evals.length - 1; i++) {
+                        obj.set(0, evals[i]);
+                        for (int j = i + 1; j < evals.length; j++) {
+                            obj.set(1, evals[j]);
+                            evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, supervised);
+                        }
+                    }
+                    break;
+                case 3:
+                    obj.add(evals[0]);
+                    obj.add(evals[0]);
+                    for (i = 0; i < evals.length - 2; i++) {
+                        obj.set(0, evals[i]);
+                        for (int j = i + 1; j < evals.length - 1; j++) {
+                            obj.set(1, evals[j]);
+                            for (int k = j + 1; k < evals.length; k++) {
+                                obj.set(2, evals[k]);
+                                evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, supervised);
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    throw new RuntimeException("not supported. min obj = " + rank.getMinObjectives());
+            }
+        }
+    }
+
+    public void clusterings(List<Clustering<E, C>> list, File results) {
+
+        Clustering<E, C> c;
+        for (int i = 0; i < list.size(); i++) {
+            c = list.get(i);
+            Map<String, String> res = new TreeMap<>();
+            res.put("size", String.valueOf(c.size()));
+            res.put("fingerprint", c.fingerprint());
+            res.put("params", c.getParams().toString());
+
+            //write header
+            if (!results.exists()) {
+                writeCsvLine(results, res.keySet().toArray(new String[0]), false);
+            }
+            writeCsvLine(results, res.values().toArray(new String[0]), true);
+        }
+
+    }
+
+    /**
+     * Write correlation to a supervised ranking to a file
+     *
+     * @param clusts
+     * @param ref
+     * @param results
+     * @param rankCmp
+     * @param rank
+     * @param obj
+     * @param map
+     */
+    private void evaluateRanking(Clustering[] clusts, Clustering[] ref,
+            File results, RankEvaluator rankCmp, Rank rank,
+            List<ClusterEvaluation<E, C>> obj, HashMap<Integer, Integer> map,
+            ClusterEvaluation supervised) {
+
+        try {
+            rank.sort(clusts, obj);
+            Map<String, String> res = new TreeMap<>();
+            String methodName = rankingStrategyName(rank, obj);
+            double corr = rankCmp.correlation(clusts, ref, map);
+            //LOG.info("{}: {}", methodName, corr);
+            res.put("method", methodName);
+            res.put("ext-ranking", supervised.getName());
+            res.put("num-objectives", String.valueOf(obj.size()));
+            res.put("ranking", rank.getName());
+            res.put(rankCmp.getName(), df.format(corr));
+
+            //write header
+            if (!results.exists()) {
+                writeCsvLine(results, res.keySet().toArray(new String[0]), false);
+            }
+            writeCsvLine(results, res.values().toArray(new String[0]), true);
+        } catch (Exception e) {
+            LOG.error("rakning failed ", e.getMessage(), e);
+        }
+
+    }
+
+    private String rankingStrategyName(Rank rank, List<ClusterEvaluation<E, C>> obj) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(rank.getName()).append("-");
+        obj.forEach((ev) -> {
+            if (ev instanceof InternalEvaluator) {
+                InternalEvaluator eval = (InternalEvaluator) ev;
+                sb.append(eval.getCallsign()).append(",");
+            } else {
+                sb.append(ev.getHandle()).append(",");
+            }
+
+        });
+        return sb.toString();
     }
 
     /**
