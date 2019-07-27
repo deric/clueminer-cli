@@ -301,14 +301,16 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             Evolution<I, E, C> evo = ef.getProvider(cliParams.se);
             StopWatch evalTime;
 
-            AbsMetaExp search = (AbsMetaExp) evo;
+            //AbsMetaExp search = (AbsMetaExp) evo;
             Props metaParams = parseJson(cliParams.getMetaParams());
             LOG.debug("meta-params: {}", metaParams.toString());
-            search.setDataset(dataset);
+
 
             for (int run = 0; run < cliParams.repeat; run++) {
                 try {
                     LOG.info("RUN {}", run);
+                    AbsMetaExp search = (AbsMetaExp) evo.getClass().getDeclaredConstructor().newInstance();
+                    search.setDataset(dataset);
                     evalTime = new StopWatch(true);
 
                     List<Clustering<E, C>> list = search.call();
