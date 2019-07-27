@@ -278,15 +278,19 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         StringBuilder sb = new StringBuilder();
 
         sb.append(rank.getName()).append("-");
-        obj.forEach((ev) -> {
+        for (int i = 0; i < obj.size(); i++) {
+            if (i > 0) {
+                sb.append(",");
+            }
+            ClusterEvaluation ev = obj.get(i);
             if (ev instanceof InternalEvaluator) {
                 InternalEvaluator eval = (InternalEvaluator) ev;
-                sb.append(eval.getCallsign()).append(",");
+                sb.append(eval.getCallsign());
             } else {
-                sb.append(ev.getHandle()).append(",");
+                sb.append(ev.getHandle());
             }
 
-        });
+        }
         return sb.toString();
     }
 
