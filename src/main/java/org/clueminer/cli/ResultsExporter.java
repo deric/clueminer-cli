@@ -27,8 +27,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadLocalRandom;
 import org.clueminer.clustering.api.AlgParams;
 import org.clueminer.clustering.api.Cluster;
 import org.clueminer.clustering.api.ClusterEvaluation;
@@ -53,6 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.clueminer.clustering.api.RankEvaluator;
 import org.clueminer.clustering.api.factory.RankFactory;
+import org.clueminer.eval.sort.MORank;
 
 /**
  * Write results into CSV files.
@@ -235,7 +238,10 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             ClusterEvaluation supervised) {
 
         try {
-            rank.sort(clusts, obj);
+            if (rank instanceof MORank) {
+                shuffleArray(clusts);
+            }
+            clusts = rank.sort(clusts, obj);
             Map<String, String> res = new TreeMap<>();
             String methodName = rankingStrategyName(rank, obj);
             double corr = rankCmp.correlation(clusts, ref, map);
@@ -254,7 +260,18 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         } catch (Exception e) {
             LOG.error("rakning failed ", e.getMessage(), e);
         }
+    }
 
+    // Implementing Fisher–Yates shuffle
+    private void shuffleArray(Clustering[] ar) {
+        Random rnd = ThreadLocalRandom.current();
+        for (int i = ar.length - 1; i > 0; i--) {
+            int index = rnd.nextInt(i + 1);
+            // Simple swap
+            Clustering a = ar[index];
+            ar[index] = ar[i];
+            ar[i] = a;
+        }
     }
 
     private String rankingStrategyName(Rank rank, List<ClusterEvaluation<E, C>> obj) {
