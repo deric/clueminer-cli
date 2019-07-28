@@ -54,7 +54,12 @@ import org.openide.util.Exceptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.clueminer.clustering.api.RankEvaluator;
+import org.clueminer.clustering.api.ScoreException;
 import org.clueminer.clustering.api.factory.RankFactory;
+import org.clueminer.eval.external.AdjustedRand;
+import org.clueminer.eval.external.NMIsqrt;
+import org.clueminer.eval.external.VI;
+import org.clueminer.eval.external.VMeasure;
 import org.clueminer.eval.sort.MORank;
 
 /**
@@ -203,13 +208,21 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
     }
 
     public void clusterings(List<Clustering<E, C>> list, File results) {
-
+        ClusterEvaluation[] evals = new ClusterEvaluation[]{
+            new NMIsqrt(), new VI(), new VMeasure(), new AdjustedRand()};
         Clustering<E, C> c;
         for (int i = 0; i < list.size(); i++) {
             c = list.get(i);
             Map<String, String> res = new TreeMap<>();
             res.put("size", String.valueOf(c.size()));
             res.put("fingerprint", c.fingerprint());
+            for (ClusterEvaluation eval : evals) {
+                try {
+                    res.put(eval.getHandle(), df.format(eval.score(c)));
+                } catch (ScoreException ex) {
+                    LOG.error("failed to evalue", ex);
+                }
+            }
             res.put("params", c.getParams().toString());
 
             //write header
