@@ -63,6 +63,10 @@ import org.clueminer.dataset.api.Dataset;
 import org.clueminer.dataset.api.Instance;
 import org.clueminer.dataset.impl.ArrayDataset;
 import org.clueminer.dgram.DgViewer;
+import org.clueminer.eval.external.AdjustedRand;
+import org.clueminer.eval.external.NMIsqrt;
+import org.clueminer.eval.external.VI;
+import org.clueminer.eval.external.VMeasure;
 import org.clueminer.evolution.api.Evolution;
 import org.clueminer.evolution.api.EvolutionFactory;
 import org.clueminer.evolution.api.EvolutionListener;
@@ -305,7 +309,6 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
             Props metaParams = parseJson(cliParams.getMetaParams());
             LOG.debug("meta-params: {}", metaParams.toString());
 
-
             for (int run = 0; run < cliParams.repeat; run++) {
                 try {
                     LOG.info("RUN {}", run);
@@ -315,15 +318,17 @@ public class Runner<I extends Individual<I, E, C>, E extends Instance, C extends
 
                     List<Clustering<E, C>> list = search.call();
                     LOG.info("found {} clusterings", list.size());
+                    ClusterEvaluation[] extEvals = new ClusterEvaluation[]{
+                        new NMIsqrt(), new VI(), new VMeasure(), new AdjustedRand()};
 
                     File res = export.createNewFile(dataset, "rankings-" + run);
                     //ranking correlation
                     LOG.info("Computing correlation to {}", cliParams.optEval);
-                    ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
-                    export.evaluateRankings(list, res, supervised);
+                    //ClusterEvaluation supervised = EvaluationFactory.getInstance().getProvider(cliParams.optEval);
+                    export.evaluateRankings(list, res, extEvals);
 
                     File clusts = export.createNewFile(dataset, "clusterings-" + run);
-                    export.clusterings(list, clusts);
+                    export.clusterings(list, clusts, extEvals);
 
                     Clustering c = list.get(0);
                     LOG.info("best template: {}", c.getParams().toJson());

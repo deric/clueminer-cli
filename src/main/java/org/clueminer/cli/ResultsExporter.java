@@ -144,16 +144,15 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
      *
      * @param list
      * @param results
-     * @param supervised
      */
-    public void evaluateRankings(List<Clustering<E, C>> list, File results, ClusterEvaluation supervised) {
+    public void evaluateRankings(List<Clustering<E, C>> list, File results, ClusterEvaluation[] extEvals) {
         RankFactory rf = RankFactory.getInstance();
         RankEvaluator rankCmp = new Correlation();
         HashMap<Integer, Integer> map = new HashMap<>(list.size());
         //internal evaluation
         InternalEvaluatorFactory ief = InternalEvaluatorFactory.getInstance();
 
-        ClusteringComparator comp = new ClusteringComparator(supervised);
+        ClusteringComparator comp = new ClusteringComparator(extEvals[0]);
         Clustering[] clusts = new Clustering[list.size()];
         Clustering[] ref = new Clustering[list.size()];
         int i = 0;
@@ -162,7 +161,6 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             ref[i] = c;
             i++;
         }
-        Arrays.sort(ref, comp);
         ClusterEvaluation[] evals = ief.getAllArray();
         List<ClusterEvaluation<E, C>> obj = new LinkedList<>();
 
@@ -174,7 +172,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                 case 1:
                     for (i = 0; i < evals.length; i++) {
                         obj.set(0, evals[i]);
-                        evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, supervised);
+                        evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, extEvals, comp);
                     }
                     break;
                 case 2:
@@ -183,7 +181,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                         obj.set(0, evals[i]);
                         for (int j = i + 1; j < evals.length; j++) {
                             obj.set(1, evals[j]);
-                            evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, supervised);
+                            evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, extEvals, comp);
                         }
                     }
                     break;
@@ -196,7 +194,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
                             obj.set(1, evals[j]);
                             for (int k = j + 1; k < evals.length; k++) {
                                 obj.set(2, evals[k]);
-                                evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, supervised);
+                                evaluateRanking(clusts, ref, results, rankCmp, rank, obj, map, extEvals, comp);
                             }
                         }
                     }
@@ -207,9 +205,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
         }
     }
 
-    public void clusterings(List<Clustering<E, C>> list, File results) {
-        ClusterEvaluation[] evals = new ClusterEvaluation[]{
-            new NMIsqrt(), new VI(), new VMeasure(), new AdjustedRand()};
+    public void clusterings(List<Clustering<E, C>> list, File results, ClusterEvaluation[] evals) {
         Clustering<E, C> c;
         for (int i = 0; i < list.size(); i++) {
             c = list.get(i);
@@ -248,22 +244,28 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
     private void evaluateRanking(Clustering[] clusts, Clustering[] ref,
             File results, RankEvaluator rankCmp, Rank rank,
             List<ClusterEvaluation<E, C>> obj, HashMap<Integer, Integer> map,
-            ClusterEvaluation supervised) {
-
+            ClusterEvaluation[] extEvals, ClusteringComparator comp) {
+        double corr;
+        String methodName = null;
         try {
             if (rank instanceof MORank) {
                 shuffleArray(clusts);
             }
             clusts = rank.sort(clusts, obj);
             Map<String, String> res = new TreeMap<>();
-            String methodName = rankingStrategyName(rank, obj);
-            double corr = rankCmp.correlation(clusts, ref, map);
-            //LOG.info("{}: {}", methodName, corr);
+            methodName = rankingStrategyName(rank, obj);
             res.put("method", methodName);
-            res.put("ext-ranking", supervised.getName());
+            for (ClusterEvaluation ext : extEvals) {
+                comp.setEvaluator(ext);
+                Arrays.sort(ref, comp);
+                corr = rankCmp.correlation(clusts, ref, map);
+                res.put(rankCmp.getName() + "-" + ext.getHandle(), df.format(corr));
+            }
+
+            //LOG.info("{}: {}", methodName, corr);
             res.put("num-objectives", String.valueOf(obj.size()));
             res.put("ranking", rank.getName());
-            res.put(rankCmp.getName(), df.format(corr));
+
 
             //write header
             if (!results.exists()) {
@@ -271,7 +273,7 @@ public class ResultsExporter<I extends Individual<I, E, C>, E extends Instance, 
             }
             writeCsvLine(results, res.values().toArray(new String[0]), true);
         } catch (Exception e) {
-            LOG.error("rakning failed ", e.getMessage(), e);
+            LOG.error("rakning {} failed: {}", methodName, e.getMessage(), e);
         }
     }
 
